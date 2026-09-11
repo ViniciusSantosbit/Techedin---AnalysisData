@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Techedin - Inteligência de Mercado de Vagas de TI</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header class="site-header">
+        <h1>Techedin</h1>
+        <p class="subtitle">Inteligência de Mercado de Vagas de TI</p>
+    </header>
+
+    <main class="container">
+        <section class="panel" id="technologies-panel">
+            <h2>Tecnologias Monitoradas</h2>
+            <div id="technologies-list" class="list-container">
+                <p class="empty-state">Carregando tecnologias...</p>
+            </div>
+        </section>
+
+        <section class="panel" id="trends-panel">
+            <h2>Tendências de Menções</h2>
+            <div id="trends-container" class="chart-container">
+                <p class="empty-state">Carregando tendências...</p>
+            </div>
+        </section>
+
+        <section class="panel" id="metrics-panel">
+            <h2>Métricas por Tecnologia</h2>
+            <form id="technology-form" class="form-row">
+                <input
+                    type="text"
+                    id="technology-name"
+                    placeholder="Digite o nome da tecnologia..."
+                    autocomplete="off"
+                />
+                <button type="submit">Consultar</button>
+            </form>
+            <div id="technology-metrics" class="metrics-container">
+                <p class="empty-state">Selecione uma tecnologia para ver as métricas.</p>
+            </div>
+        </section>
+
+        <section class="panel" id="seniority-panel">
+            <h2>Análise por Senioridade</h2>
+            <div id="seniority-container" class="chart-container">
+                <p class="empty-state">Carregando análise...</p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <p>Techedin - Dados atualizados a partir da API backend.</p>
+    </footer>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
