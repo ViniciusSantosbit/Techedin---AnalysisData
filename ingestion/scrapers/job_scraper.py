@@ -1,13 +1,18 @@
 import os
 import re
 import logging
+import time
+from pathlib import Path
 
 import pandas as pd
 import psycopg2
 from dotenv import load_dotenv
-from playwright.sync_api import sync_playwright, Browser, Page
+from playwright.sync_api import sync_playwright, Browser, Page, TimeoutError as PlaywrightTimeoutError
 
-load_dotenv()
+# Carrega .env de forma robusta: diretório atual + raiz do projeto
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+ENV_PATH = BASE_DIR / "ingestion" / ".env"
+load_dotenv(dotenv_path=ENV_PATH, override=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,19 +46,26 @@ class PlaywrightScraper:
 
     def fetch_page(self, url: str, wait_selector: str = "body") -> Page:
         page = self._browser.new_page()
-        logger.info(f"Navegando para: {url}")
-        page.goto(url, wait_until="domcontentloaded")
+        page.set_default_timeout(3000)
+        page.set_default_navigation_timeout(3000)
+        logger.info(f"Navegando para: {url} (timeout: 3s)")
         try:
-            page.wait_for_selector(wait_selector, timeout=15000)
+            page.goto(url, wait_until="domcontentloaded", timeout=3000)
+        except Exception as e:
+            logger.warning(f"Timeout/erro ao navegar para {url}: {e}. Tentando continuar...")
+            return page
+        try:
+            page.wait_for_selector(wait_selector, timeout=3000)
             logger.info(f"Página carregada. Seletor encontrado: '{wait_selector}'")
         except Exception:
-            logger.warning(f"Seletor '{wait_selector}' não encontrado em {url}, continuando mesmo assim.")
+            logger.warning(f"Seletor '{wait_selector}' não encontrado em {url} dentro do timeout. Continuando com conteúdo parcial.")
         return page
 
     def extract_jobs_from_page(self, page: Page) -> list[dict]:
         jobs: list[dict] = []
         source_url = page.url
 
+        cards = []
         try:
             cards = page.locator(
                 "[data-testid='job-card'], .job-card, [class*='card'], article, li"
@@ -61,52 +73,65 @@ class PlaywrightScraper:
             logger.info(f"Elementos candidatos encontrados: {len(cards)}")
         except Exception as e:
             logger.error(f"Falha ao localizar cards na página: {e}")
-            cards = []
 
-        for index, card in enumerate(cards):
+        if not cards:
+            logger.warning("Nenhum card encontrado na página.")
+            return jobs
+
+        # Limite de amostragem: apenas os 5 primeiros elementos
+        sample_cards = cards[:5]
+        logger.info(f"Processando amostra de {len(sample_cards)} vagas (top 5 de {len(cards)})...")
+
+        for idx, card in enumerate(sample_cards, start=1):
+            logger.info(f"Processando vaga {idx} de {len(sample_cards)}...")
+            start_time = time.time()
+            title = "Não informado"
+            company = "Não informado"
+            description = ""
+            link = ""
+
             try:
-                title = self._extract_text(
-                    card,
-                    "h1, h2, h3, [class*='title'], a, strong, b"
-                )
-                company = self._extract_text(
-                    card,
-                    "[class*='company'], [class*='empresa'], [class*='name']"
-                )
-                description = self._extract_text(
-                    card,
-                    "[class*='description'], [class*='descricao'], p, span"
-                )
-                link = card.locator("a").first.get_attribute("href") or ""
-
+                # Extração com timeout de 1 segundo por campo
+                title = self._extract_text_with_timeout(card, "h1, h2, h3, [class*='title'], a, strong, b", 1000)
+                company = self._extract_text_with_timeout(card, "[class*='company'], [class*='empresa'], [class*='name']", 1000)
+                description = self._extract_text_with_timeout(card, "[class*='description'], [class*='descricao'], p, span", 1000)
+                link = self._extract_link_with_timeout(card, 1000)
                 link = self._normalize_link(link, source_url)
-
-                if not title or not company:
-                    continue
-
-                jobs.append({
-                    "title": title,
-                    "company": company,
-                    "description": description,
-                    "source": source_url.split("/")[2],
-                    "source_url": source_url,
-                    "link": link,
-                })
-                logger.info(f"Vaga extraída #{len(jobs)}: '{title}' | {company}")
-
-                if len(jobs) >= 3:
-                    logger.info("Limite mínimo de 3 vagas atingido. Interrompendo extração.")
-                    break
             except Exception as e:
-                logger.debug(f"Falha ao processar card #{index}: {e}")
+                logger.warning(f"Vaga {idx}: falha na extração ({e})")
+
+            elapsed = time.time() - start_time
+            logger.info(f"Vaga {idx}: título='{title}' | empresa='{company}' | tempo={elapsed:.2f}s")
+
+            if title == "Não informado" and company == "Não informado":
+                logger.info(f"Vaga {idx}: ignorada (sem dados válidos)")
                 continue
+
+            jobs.append({
+                "title": title,
+                "company": company,
+                "description": description,
+                "source": source_url.split("/")[2],
+                "source_url": source_url,
+                "link": link,
+            })
+            logger.info(f"Vaga {idx}: adicionada com sucesso")
 
         return jobs
 
-    @staticmethod
-    def _extract_text(card, selector: str) -> str:
+    def _extract_text_with_timeout(self, card, selector: str, timeout_ms: int) -> str:
         try:
-            return (card.locator(selector).first.text_content() or "").strip()
+            locator = card.locator(selector).first
+            # timeout no Playwright é em ms
+            return (locator.text_content(timeout=timeout_ms) or "").strip()
+        except PlaywrightTimeoutError:
+            return "Não informado"
+        except Exception:
+            return "Não informado"
+
+    def _extract_link_with_timeout(self, card, timeout_ms: int) -> str:
+        try:
+            return card.locator("a").first.get_attribute("href", timeout=timeout_ms) or ""
         except Exception:
             return ""
 
@@ -159,22 +184,37 @@ def _clean_text(text: str) -> str:
 # ============================================================
 
 class PostgresJobRepository:
+    # Host correto do Supabase como fallback obrigatório
+    SUPABASE_HOST = "db.hvuprzgcxkirpgftnohx.supabase.co"
+
     def __init__(self):
         self.dsn = self._build_dsn()
 
     @staticmethod
     def _build_dsn() -> str:
-        host = os.getenv("DB_HOST", "localhost")
+        host = os.getenv("DB_HOST", "").strip()
+        if not host:
+            host = PostgresJobRepository.SUPABASE_HOST
+            logger.warning(f"DB_HOST vazio no .env. Usando fallback Supabase: {host}")
         port = os.getenv("DB_PORT", "5432")
         dbname = os.getenv("DB_NAME", "techedin")
         user = os.getenv("DB_USER", "postgres")
         password = os.getenv("DB_PASSWORD", "postgres")
-        sslmode = os.getenv("DB_SSLMODE", "prefer")
+        sslmode = os.getenv("DB_SSLMODE", "require")
         return f"host={host} port={port} dbname={dbname} user={user} password={password} sslmode={sslmode}"
 
     def _connect(self):
-        logger.info("Conectando ao PostgreSQL...")
+        # Extrai host e user do DSN para log claro
+        host = self._extract_param(self.dsn, "host")
+        user = self._extract_param(self.dsn, "user")
+        logger.info(f"Conectando ao PostgreSQL... host={host} user={user}")
         return psycopg2.connect(self.dsn)
+
+    @staticmethod
+    def _extract_param(dsn: str, param: str) -> str:
+        import re
+        match = re.search(rf"{param}=([^\s]+)", dsn)
+        return match.group(1) if match else "desconhecido"
 
     def upsert_jobs(self, jobs: list[dict]) -> int:
         if not jobs:
@@ -211,8 +251,10 @@ class PostgresJobRepository:
         conn = None
         try:
             from psycopg2.extras import execute_values
+            logger.info("Conectando ao PostgreSQL (Supabase)...")
             conn = self._connect()
             cur = conn.cursor()
+            logger.info("Inserindo no Supabase...")
             execute_values(cur, insert_sql, rows, fetch=False, page_size=100)
             conn.commit()
             inserted = len(rows)
@@ -231,6 +273,7 @@ class PostgresJobRepository:
         finally:
             if conn:
                 conn.close()
+                logger.info("Conexão com banco fechada.")
         return inserted
 
 
@@ -268,16 +311,31 @@ def run_scraper():
         return
 
     logger.info(f"Total de vagas coletadas: {len(all_jobs)}")
+    logger.info("Iniciando limpeza com Pandas...")
     repo.upsert_jobs(all_jobs)
     logger.info("Execução finalizada.")
 
 
 def scrape_single_url(url: str) -> list[dict]:
     jobs: list[dict] = []
-    with PlaywrightScraper(headless=True) as scraper:
+    scraper = None
+    try:
+        logger.info(f"Iniciando extração para: {url}")
+        scraper = PlaywrightScraper(headless=True)
+        scraper.__enter__()
         page = scraper.fetch_page(url, wait_selector="body")
         jobs = scraper.extract_jobs_from_page(page)
-    logger.info(f"Extração concluída para {url}. Vagas capturadas: {len(jobs)}")
+        logger.info(f"Extração concluída para {url}. Vagas capturadas: {len(jobs)}")
+        logger.info("Passando dados para o Pandas...")
+    except Exception as e:
+        logger.error(f"Erro crítico ao processar {url}: {e}")
+    finally:
+        if scraper:
+            try:
+                scraper.__exit__(None, None, None)
+                logger.info("Navegador fechado.")
+            except Exception:
+                pass
     return jobs
 
 
