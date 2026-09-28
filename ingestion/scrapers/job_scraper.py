@@ -46,16 +46,16 @@ class PlaywrightScraper:
 
     def fetch_page(self, url: str, wait_selector: str = "body") -> Page:
         page = self._browser.new_page()
-        page.set_default_timeout(3000)
-        page.set_default_navigation_timeout(3000)
-        logger.info(f"Navegando para: {url} (timeout: 3s)")
+        page.set_default_timeout(15000)
+        page.set_default_navigation_timeout(15000)
+        logger.info(f"Navegando para: {url} (timeout: 15s)")
         try:
-            page.goto(url, wait_until="domcontentloaded", timeout=3000)
+            page.goto(url, wait_until="domcontentloaded", timeout=15000)
         except Exception as e:
             logger.warning(f"Timeout/erro ao navegar para {url}: {e}. Tentando continuar...")
             return page
         try:
-            page.wait_for_selector(wait_selector, timeout=3000)
+            page.wait_for_selector(wait_selector, timeout=15000)
             logger.info(f"Página carregada. Seletor encontrado: '{wait_selector}'")
         except Exception:
             logger.warning(f"Seletor '{wait_selector}' não encontrado em {url} dentro do timeout. Continuando com conteúdo parcial.")
