@@ -54,4 +54,19 @@ public interface FactJobTechnologyRepository extends JpaRepository<FactJobTechno
         ORDER BY SUM(f.mentionCount) DESC
     """)
     List<com.techedin.backend.dto.TechnologyMetricsDTO> findMetricsByName(@Param("name") String name);
+
+    @Query("""
+        SELECT new com.techedin.backend.dto.TrendDTO(
+            d.date,
+            t.name,
+            SUM(f.mentionCount)
+        )
+        FROM FactJobTechnology f
+        JOIN f.job j
+        JOIN f.technology t
+        JOIN f.date d
+        GROUP BY d.date, t.name
+        ORDER BY d.date ASC
+    """)
+    List<com.techedin.backend.dto.TrendDTO> findTemporalTrends();
 }

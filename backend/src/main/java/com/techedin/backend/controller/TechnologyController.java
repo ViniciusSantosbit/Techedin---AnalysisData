@@ -3,6 +3,7 @@ package com.techedin.backend.controller;
 import com.techedin.backend.dto.TechnologyDTO;
 import com.techedin.backend.dto.TechnologyMetricsDTO;
 import com.techedin.backend.dto.TechnologyTrendDTO;
+import com.techedin.backend.dto.TrendDTO;
 import com.techedin.backend.service.TechnologyService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +13,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/technologies")
+@CrossOrigin(origins = "*")
 public class TechnologyController {
 
     private final TechnologyService technologyService;
@@ -26,8 +28,8 @@ public class TechnologyController {
     }
 
     @GetMapping("/trends")
-    public ResponseEntity<List<TechnologyTrendDTO>> getTrends() {
-        return ResponseEntity.ok(technologyService.getTrends());
+    public ResponseEntity<List<TrendDTO>> getTrends() {
+        return ResponseEntity.ok(technologyService.getTechnologyTrends());
     }
 
     @GetMapping("/{name}")
