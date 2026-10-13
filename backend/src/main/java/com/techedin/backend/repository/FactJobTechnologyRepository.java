@@ -20,6 +20,7 @@ public interface FactJobTechnologyRepository extends JpaRepository<FactJobTechno
         FROM FactJobTechnology f
         JOIN f.technology t
         JOIN f.date d
+        WHERE f.job.demo = false AND f.job.verified = true
         GROUP BY t.name, d.year, d.month
         ORDER BY d.year DESC, d.month DESC
     """)
@@ -34,6 +35,7 @@ public interface FactJobTechnologyRepository extends JpaRepository<FactJobTechno
         FROM FactJobTechnology f
         JOIN f.technology t
         JOIN f.seniority s
+        WHERE f.job.demo = false AND f.job.verified = true
         GROUP BY s.level, t.name
         ORDER BY s.level, SUM(f.mentionCount) DESC
     """)
@@ -49,9 +51,9 @@ public interface FactJobTechnologyRepository extends JpaRepository<FactJobTechno
         FROM FactJobTechnology f
         JOIN f.technology t
         JOIN f.seniority s
-        WHERE t.name = :name
+        WHERE LOWER(t.name) = LOWER(:name) AND f.job.demo = false AND f.job.verified = true
         GROUP BY t.name, s.level
-        ORDER BY SUM(f.mentionCount) DESC
+        ORDER BY SUM(f.mentionCount) DESC, s.level ASC
     """)
     List<com.techedin.backend.dto.TechnologyMetricsDTO> findMetricsByName(@Param("name") String name);
 
@@ -65,6 +67,7 @@ public interface FactJobTechnologyRepository extends JpaRepository<FactJobTechno
         JOIN f.job j
         JOIN f.technology t
         JOIN f.date d
+        WHERE f.job.demo = false AND f.job.verified = true
         GROUP BY d.date, t.name
         ORDER BY d.date ASC
     """)

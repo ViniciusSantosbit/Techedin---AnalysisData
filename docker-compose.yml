@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: techedin
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:-postgres}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d techedin"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  backend:
+    build: ./backend
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/techedin
+      DB_USER: postgres
+      DB_PASSWORD: ${LOCAL_DB_PASSWORD:-postgres}
+      CORS_ALLOWED_ORIGINS: http://localhost:8081
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+  frontend:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:8081:80"
+    depends_on:
+      - backend
+  scraper:
+    profiles: ["ingestion"]
+    build: ./ingestion
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: techedin
+      DB_USER: postgres
+      DB_PASSWORD: ${LOCAL_DB_PASSWORD:-postgres}
+      DB_SSLMODE: disable
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  pgdata:

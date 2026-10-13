@@ -3,58 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Techedin - Inteligência de Mercado de Vagas de TI</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <meta name="theme-color" content="#000000">
+    <title>Techedin · Radar do mercado de tecnologia</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=20261012-02">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script>
 </head>
 <body>
     <header class="site-header">
-        <h1>Techedin</h1>
-        <p class="subtitle">Inteligência de Mercado de Vagas de TI</p>
+        <a class="brand" href="#" aria-label="Techedin início"><span class="brand-mark">t<span>·</span></span>techedin<span class="brand-tag">market intelligence</span></a>
+        <nav aria-label="Navegação principal"><a class="nav-active" href="#overview">Visão geral</a><a href="#jobs-section">Vagas coletadas</a><a href="#sources-section">Fontes</a></nav>
+        <span class="header-label"><span class="live-dot"></span>Dados de vagas públicas</span>
     </header>
 
-    <main class="container">
-        <section class="panel" id="technologies-panel">
-            <h2>Tecnologias Monitoradas</h2>
-            <div id="technologies-list" class="list-container">
-                <p class="empty-state">Carregando tecnologias...</p>
-            </div>
+    <main class="dashboard" id="overview">
+        <section class="page-heading">
+            <div><span class="eyebrow">SEU PRÓXIMO PASSO, COM MAIS CLAREZA</span><h1>O mercado tech,<br>em perspectiva<span>.</span></h1><p>Descubra as tecnologias citadas nas vagas e explore as oportunidades por trás dos números.</p></div>
+            <div class="heading-actions"><span class="status-pill" id="data-status" role="status">Carregando dados…</span><button id="refresh-btn" class="refresh-button" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-1l2 6M4 12l2 6a7 7 0 0 0 12-1"/></svg>Atualizar painel</button><span class="update-text" id="last-update">—</span></div>
         </section>
 
-        <section class="panel" id="trends-panel">
-            <h2>Tendências de Menções</h2>
-            <div id="trends-container" class="chart-container">
-                <p class="empty-state">Carregando tendências...</p>
-            </div>
+        <div class="notice" id="data-notice" role="status" hidden></div>
+        <section class="stats-grid" aria-label="Resumo da amostra">
+            <article class="stat-card"><span class="stat-label">Vagas na amostra<span class="stat-icon">↗</span></span><strong id="stat-jobs">—</strong><span class="stat-caption">Oportunidades reais coletadas</span></article>
+            <article class="stat-card"><span class="stat-label">Tecnologias encontradas<span class="stat-icon">⌘</span></span><strong id="stat-technologies">—</strong><span class="stat-caption">Citações nas descrições</span></article>
+            <article class="stat-card"><span class="stat-label">Empresas na amostra<span class="stat-icon">▦</span></span><strong id="stat-companies">—</strong><span class="stat-caption">Empresas identificadas</span></article>
+            <article class="stat-card accent-card"><span class="stat-label">Tecnologia mais citada<span class="stat-icon">✦</span></span><strong id="stat-top">—</strong><span class="stat-caption" id="stat-top-caption">Aguardando coleta</span></article>
         </section>
 
-        <section class="panel" id="metrics-panel">
-            <h2>Métricas por Tecnologia</h2>
-            <form id="technology-form" class="form-row">
-                <input
-                    type="text"
-                    id="technology-name"
-                    placeholder="Digite o nome da tecnologia..."
-                    autocomplete="off"
-                />
-                <button type="submit">Consultar</button>
-            </form>
-            <div id="technology-metrics" class="metrics-container">
-                <p class="empty-state">Selecione uma tecnologia para ver as métricas.</p>
-            </div>
+        <section class="insights-grid" aria-label="Análises de tecnologias">
+            <article class="panel ranking-panel">
+                <div class="panel-heading"><div><span class="eyebrow">O QUE AS VAGAS PEDEM</span><h2>Tecnologias em destaque</h2></div><span class="subtle-pill">TOP 8</span></div>
+                <p class="panel-description">Número de vagas que citam cada tecnologia.</p>
+                <div class="ranking-list" id="ranking-list" aria-label="Ranking de tecnologias"><p class="empty-message">Carregando o ranking…</p></div>
+                <p class="panel-note">Uma vaga pode citar várias tecnologias. Clique em uma delas para explorar.</p>
+            </article>
+            <article class="panel evolution-panel">
+                <div class="panel-heading"><div><span class="eyebrow">UM OLHAR AO LONGO DO TEMPO</span><h2>Evolução das publicações</h2></div><span class="subtle-pill" id="period-label">—</span></div>
+                <div class="chart-selection"><label for="technology-select">Tecnologia</label><select id="technology-select" disabled><option>Aguardando dados</option></select><span class="series-key"><i></i>Vagas na amostra</span></div>
+                <div class="chart-wrap"><canvas id="trendsChart" role="img" aria-label="Vagas por data para a tecnologia selecionada"></canvas><div id="chart-message" class="chart-message" role="status" hidden></div></div>
+                <p class="panel-note">Data de publicação; quando ausente, data da primeira coleta. Não representa o total de vagas ativas.</p>
+            </article>
         </section>
 
-        <section class="panel" id="seniority-panel">
-            <h2>Análise por Senioridade</h2>
-            <div id="seniority-container" class="chart-container">
-                <p class="empty-state">Carregando análise...</p>
-            </div>
+        <section class="bottom-grid">
+            <article class="panel seniority-panel"><div class="panel-heading"><div><span class="eyebrow">NÍVEIS DE EXPERIÊNCIA</span><h2>Perfil das oportunidades</h2></div></div><div class="seniority-bar" id="seniority-bar" aria-hidden="true"></div><div id="seniority-list" class="seniority-list"><p class="empty-message">Aguardando dados.</p></div><p class="panel-note">Senioridade identificada no título da vaga.</p></article>
+            <article class="panel sources-panel" id="sources-section"><div class="panel-heading"><div><span class="eyebrow">TRANSPARÊNCIA DA COLETA</span><h2>De onde vêm os dados</h2></div><span class="subtle-pill">FONTES PÚBLICAS</span></div><div id="sources-list" class="sources-list"><p class="empty-message">Aguardando coleta.</p></div><p class="panel-note" id="sample-note">Os resultados representam a amostra coletada, com links para conferir cada vaga.</p></article>
         </section>
+
+        <section class="panel jobs-panel" id="jobs-section">
+            <div class="panel-heading"><div><span class="eyebrow">DOS NÚMEROS ÀS OPORTUNIDADES</span><h2>Explore as vagas coletadas</h2></div><span class="subtle-pill" id="jobs-count">—</span></div>
+            <div class="jobs-toolbar"><label class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="job-search" type="search" placeholder="Buscar por cargo, empresa ou tecnologia" aria-label="Buscar vagas"></label><button id="clear-filter" class="text-button" type="button" hidden>Limpar filtro</button></div>
+            <div id="jobs-list" class="jobs-list"><p class="empty-message">Carregando as oportunidades…</p></div>
+            <button id="more-jobs" class="load-more" type="button" hidden>Ver mais vagas</button>
+        </section>
+        <footer class="dashboard-footer"><span><b>techedin</b> · Mais contexto para suas decisões.</span><span id="footer-provenance">Dados públicos · Amostra de vagas de TI</span></footer>
     </main>
-
-    <footer class="site-footer">
-        <p>Techedin - Dados atualizados a partir da API backend.</p>
-    </footer>
-
-    <script src="js/app.js"></script>
+    <noscript>Ative o JavaScript para consultar os gráficos e as vagas.</noscript>
+    <script type="module" src="js/app.js?v=20261012-02"></script>
 </body>
 </html>

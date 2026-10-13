@@ -1,29 +1,4 @@
--- ============================================================
--- V1__initial_star_schema.sql
--- Techedin - Star Schema Inicial (PostgreSQL)
--- ============================================================
-
--- ============================================================
--- Tabela Fato
--- ============================================================
-CREATE TABLE IF NOT EXISTS fact_job_technology (
-    job_id         BIGINT      NOT NULL,
-    technology_id  BIGINT      NOT NULL,
-    date_id        BIGINT      NOT NULL,
-    seniority_id   BIGINT      NOT NULL,
-    mention_count  INTEGER     NOT NULL DEFAULT 1,
-
-    CONSTRAINT pk_fact_job_technology PRIMARY KEY (job_id, technology_id, date_id, seniority_id),
-    CONSTRAINT fk_fact_job_technology_dim_job        FOREIGN KEY (job_id)        REFERENCES dim_job (job_id)        ON DELETE CASCADE,
-    CONSTRAINT fk_fact_job_technology_dim_technology FOREIGN KEY (technology_id) REFERENCES dim_technology (technology_id) ON DELETE CASCADE,
-    CONSTRAINT fk_fact_job_technology_dim_date       FOREIGN KEY (date_id)        REFERENCES dim_date (date_id)       ON DELETE CASCADE,
-    CONSTRAINT fk_fact_job_technology_dim_seniority  FOREIGN KEY (seniority_id)   REFERENCES dim_seniority (seniority_id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_fact_job_technology_date       ON fact_job_technology (date_id);
-CREATE INDEX IF NOT EXISTS idx_fact_job_technology_technology ON fact_job_technology (technology_id);
-CREATE INDEX IF NOT EXISTS idx_fact_job_technology_seniority  ON fact_job_technology (seniority_id);
-
+-- Dimensões devem existir antes das chaves estrangeiras.
 -- ============================================================
 -- Dimensões
 -- ============================================================
@@ -67,3 +42,21 @@ CREATE TABLE IF NOT EXISTS dim_seniority (
     seniority_id BIGSERIAL PRIMARY KEY,
     level        VARCHAR(100) NOT NULL UNIQUE
 );
+
+CREATE TABLE IF NOT EXISTS fact_job_technology (
+    job_id         BIGINT      NOT NULL,
+    technology_id  BIGINT      NOT NULL,
+    date_id        BIGINT      NOT NULL,
+    seniority_id   BIGINT      NOT NULL,
+    mention_count  INTEGER     NOT NULL DEFAULT 1,
+
+    CONSTRAINT pk_fact_job_technology PRIMARY KEY (job_id, technology_id, date_id, seniority_id),
+    CONSTRAINT fk_fact_job_technology_dim_job        FOREIGN KEY (job_id)        REFERENCES dim_job (job_id)        ON DELETE CASCADE,
+    CONSTRAINT fk_fact_job_technology_dim_technology FOREIGN KEY (technology_id) REFERENCES dim_technology (technology_id) ON DELETE CASCADE,
+    CONSTRAINT fk_fact_job_technology_dim_date       FOREIGN KEY (date_id)        REFERENCES dim_date (date_id)       ON DELETE CASCADE,
+    CONSTRAINT fk_fact_job_technology_dim_seniority  FOREIGN KEY (seniority_id)   REFERENCES dim_seniority (seniority_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_fact_job_technology_date       ON fact_job_technology (date_id);
+CREATE INDEX IF NOT EXISTS idx_fact_job_technology_technology ON fact_job_technology (technology_id);
+CREATE INDEX IF NOT EXISTS idx_fact_job_technology_seniority  ON fact_job_technology (seniority_id);

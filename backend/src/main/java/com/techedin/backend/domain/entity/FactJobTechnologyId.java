@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Embeddable
+@EqualsAndHashCode
 @Getter
 @Setter
 @NoArgsConstructor

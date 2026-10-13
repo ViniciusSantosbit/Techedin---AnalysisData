@@ -5,6 +5,8 @@ import com.techedin.backend.dto.TechnologyMetricsDTO;
 import com.techedin.backend.dto.TechnologyTrendDTO;
 import com.techedin.backend.dto.TrendDTO;
 import com.techedin.backend.service.TechnologyService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,8 +15,10 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/technologies")
-@CrossOrigin(origins = "*")
+
 public class TechnologyController {
+
+    private static final Logger log = LoggerFactory.getLogger(TechnologyController.class);
 
     private final TechnologyService technologyService;
 
@@ -24,22 +28,43 @@ public class TechnologyController {
 
     @GetMapping
     public ResponseEntity<List<TechnologyDTO>> listTechnologies() {
-        return ResponseEntity.ok(technologyService.getAllTechnologies());
+        try {
+            List<TechnologyDTO> technologies = technologyService.getAllTechnologies();
+            log.info("GET /api/technologies - Returning {} technologies", technologies.size());
+            return ResponseEntity.ok(technologies);
+        } catch (Exception e) {
+            log.error("Erro ao listar tecnologias: ", e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @GetMapping("/trends")
     public ResponseEntity<List<TrendDTO>> getTrends() {
-        return ResponseEntity.ok(technologyService.getTechnologyTrends());
+        try {
+            List<TrendDTO> trends = technologyService.getTechnologyTrends();
+            log.info("GET /api/technologies/trends - Returning {} trends", trends.size());
+            return ResponseEntity.ok(trends);
+        } catch (Exception e) {
+            log.error("Erro ao buscar tendências: ", e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @GetMapping("/{name}")
     public ResponseEntity<?> getTechnologyMetrics(@PathVariable String name) {
-        Optional<TechnologyDTO> technology = technologyService.getTechnologyByName(name);
-        if (technology.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
+        try {
+            Optional<TechnologyDTO> technology = technologyService.getTechnologyByName(name);
+            if (technology.isEmpty()) {
+                log.warn("Tecnologia não encontrada: {}", name);
+                return ResponseEntity.notFound().build();
+            }
 
-        List<TechnologyMetricsDTO> metrics = technologyService.getMetricsByName(name);
-        return ResponseEntity.ok(metrics);
+            List<TechnologyMetricsDTO> metrics = technologyService.getMetricsByName(name);
+            log.info("GET /api/technologies/{} - Returning {} metrics", name, metrics.size());
+            return ResponseEntity.ok(metrics);
+        } catch (Exception e) {
+            log.error("Erro ao buscar métricas para tecnologia {}: ", name, e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

@@ -1,0 +1,12 @@
+spring.datasource.url=${DB_URL:jdbc:postgresql://localhost:5432/techedin}
+spring.datasource.username=${DB_USER:postgres}
+spring.datasource.password=${DB_PASSWORD:postgres}
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.open-in-view=false
+spring.jpa.show-sql=false
+spring.flyway.enabled=true
+app.cors.allowed-origins=${CORS_ALLOWED_ORIGINS:http://localhost:8081,http://localhost:5500}
+app.scraper.enabled=${SCRAPER_ADMIN_ENABLED:false}
+app.scraper.token=${SCRAPER_ADMIN_TOKEN:}
+app.scraper.python=${SCRAPER_PYTHON:python}
+app.scraper.script=${SCRAPER_SCRIPT:../ingestion/scrapers/job_scraper.py}

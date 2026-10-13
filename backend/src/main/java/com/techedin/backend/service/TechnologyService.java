@@ -45,7 +45,14 @@ public class TechnologyService {
     }
 
     public List<TechnologyMetricsDTO> getMetricsByName(String name) {
-        return factJobTechnologyRepository.findMetricsByName(name);
+        List<TechnologyMetricsDTO> rows = factJobTechnologyRepository.findMetricsByName(name);
+        if (rows.isEmpty()) {
+            return List.of(new TechnologyMetricsDTO(name, 0L, null, 0L));
+        }
+        long total = rows.stream().mapToLong(TechnologyMetricsDTO::getTotalMentions).sum();
+        TechnologyMetricsDTO top = rows.getFirst();
+        return List.of(new TechnologyMetricsDTO(top.getName(), total,
+                top.getTopSeniority(), top.getTopSeniorityMentions()));
     }
 
     private TechnologyDTO toDto(DimTechnology entity) {

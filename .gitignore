@@ -1,7 +1,61 @@
+# Environment files with secrets
 .env
+.env.local
+.env.*.local
+backend/src/main/resources/application.properties
+backend/src/main/resources/application-*.properties
+ingestion/.env
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.log
 .venv/
 venv/
+*.egg-info/
+dist/
+build/
+
+# Java/Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Docker
+docker-compose.override.yml
+# Safe configuration templates and generated demo data
+!backend/src/main/resources/application.properties
+!ingestion/.env.example
+.kilo/
+demo-jobs.json
+frontend-preview.png
+frontend-mobile-preview.png
+frontend-preview-top.png
+frontend/data/jobs.json
+frontend/data/jobs.json.tmp
