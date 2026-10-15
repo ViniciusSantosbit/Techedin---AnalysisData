@@ -1,13 +1,17 @@
 """Coleta real e demonstração explícita, sem mistura de dados."""
 import argparse
+from email.utils import parsedate_to_datetime
+from html.parser import HTMLParser
 import json
 import logging
 import os
 import re
 import unicodedata
+import xml.etree.ElementTree as ET
 from datetime import date, timedelta, datetime, timezone
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit, urlunsplit, parse_qs, parse_qsl, urlencode, quote
+from urllib.request import Request, urlopen
 
 import psycopg2
 from dotenv import load_dotenv
@@ -111,6 +115,110 @@ def scraper_urls():
             url = f'https://portal.gupy.io/job-search/term={quote(term[0])}'
         urls.append(url)
     return urls
+
+
+def rss_urls():
+    raw = os.getenv('SCRAPER_RSS_URLS',
+        'https://weworkremotely.com/categories/remote-programming-jobs.rss')
+    return [part.strip() for part in raw.split(',') if part.strip()]
+
+
+class FeedText(HTMLParser):
+    """Extract readable text from RSS descriptions that contain HTML."""
+    def __init__(self):
+        super().__init__()
+        self.parts = []
+
+    def handle_data(self, data):
+        if data.strip():
+            self.parts.append(data.strip())
+
+    def text(self, value):
+        self.parts.clear()
+        self.reset()
+        self.feed(value or '')
+        self.close()
+        return re.sub(r'\s+', ' ', ' '.join(self.parts)).strip()
+
+
+def parse_rss_jobs(feed_url, max_jobs=30):
+    """Read a public RSS feed into the same job shape used by the dashboard."""
+    feed = urlsplit(feed_url)
+    if feed.scheme != 'https' or feed.hostname not in ('weworkremotely.com', 'www.weworkremotely.com') or not feed.path.endswith('.rss'):
+        raise ValueError('A integração RSS aceita apenas feeds HTTPS do We Work Remotely.')
+    request = Request(feed_url, headers={'User-Agent': 'TechedinJobCollector/1.0'})
+    with urlopen(request, timeout=20) as response:
+        if response.status >= 400:
+            raise RuntimeError(f'HTTP {response.status} em {feed_url}')
+        payload = response.read(5 * 1024 * 1024 + 1)
+    if len(payload) > 5 * 1024 * 1024:
+        raise RuntimeError(f'Feed RSS excede o limite de 5 MB: {feed_url}')
+
+    if b'<!DOCTYPE' in payload.upper() or b'<!ENTITY' in payload.upper():
+        raise ValueError('Declarações de entidades não são permitidas no feed RSS.')
+    root = ET.fromstring(payload)
+    entries = root.findall('.//item')
+    if not entries:
+        # Support Atom feeds as well as RSS without changing the normalized job format.
+        entries = root.findall('.//{http://www.w3.org/2005/Atom}entry')
+
+    jobs, seen = [], set()
+    text_parser = FeedText()
+    for entry in entries:
+        if len(jobs) >= max_jobs:
+            break
+        title = (entry.findtext('title') or
+                 entry.findtext('{http://www.w3.org/2005/Atom}title') or '').strip()
+        link = (entry.findtext('link') or '').strip()
+        if not link:
+            atom_link = entry.find('{http://www.w3.org/2005/Atom}link')
+            link = atom_link.get('href', '').strip() if atom_link is not None else ''
+        if not link:
+            continue
+        link = canonical_url(feed_url, link)
+        if not title or not link or link in seen:
+            continue
+        parsed_link = urlsplit(link)
+        if (parsed_link.scheme != 'https' or parsed_link.hostname not in ('weworkremotely.com', 'www.weworkremotely.com')
+                or not parsed_link.path.startswith('/remote-jobs/')):
+            logger.warning('Link RSS fora do domínio esperado, ignorado: %s', link)
+            continue
+
+        raw_description = (entry.findtext('description') or
+                           entry.findtext('{http://www.w3.org/2005/Atom}summary') or
+                           entry.findtext('{http://www.w3.org/2005/Atom}content') or '')
+        description = text_parser.text(raw_description)
+        if not description:
+            logger.warning('Anúncio RSS sem descrição, ignorado: %s', link)
+            continue
+
+        company, job_title = 'Não informado', title
+        if ': ' in title:
+            company, job_title = (part.strip() for part in title.split(': ', 1))
+            if not company or not job_title:
+                company, job_title = 'Não informado', title
+
+        published = None
+        for date_field in ('pubDate', '{http://www.w3.org/2005/Atom}published',
+                           '{http://www.w3.org/2005/Atom}updated'):
+            published_text = entry.findtext(date_field)
+            if published_text:
+                try:
+                    parsed_datetime = parsedate_to_datetime(published_text)
+                    published = parsed_datetime.astimezone(timezone.utc).date() if parsed_datetime.tzinfo else parsed_datetime.date()
+                except (TypeError, ValueError, OverflowError):
+                    published = parse_published_date(published_text)
+                if published and date(2000, 1, 1) <= published <= date.today():
+                    break
+                published = None
+
+        seen.add(link)
+        jobs.append({'title': job_title[:255], 'company': company[:255],
+                     'description': description, 'source': 'We Work Remotely', 'source_url': link,
+                     'published_date': published, 'seniority': parse_seniority(job_title),
+                     'technologies': extract_technologies(job_title + '\n' + description),
+                     'is_demo': False})
+    return jobs
 
 
 def first_text(container, selectors):
@@ -281,25 +389,50 @@ def demo_jobs():
 
 def collect_jobs(max_jobs=30):
     jobs, sources = [], []
-    with PlaywrightScraper() as scraper:
-        for url in scraper_urls():
-            logger.info('Coletando fonte: %s', url)
-            page = None
-            try:
-                page = scraper.fetch_page(url)
-                collected = scraper.extract_jobs_from_page(page, max_jobs)
-                logger.info('Fonte %s: %s vagas reais extraídas.', urlsplit(url).hostname, len(collected))
-                sources.append({'url': url, 'name': urlsplit(url).hostname,
-                                'status': 'ok' if collected else 'empty', 'jobCount': len(collected),
-                                'message': None if collected else 'Nenhuma vaga encontrada nesta consulta.'})
-                jobs.extend(collected)
-            except Exception as exc:
-                sources.append({'url': url, 'name': urlsplit(url).hostname,
-                                'status': 'unavailable', 'jobCount': 0, 'message': str(exc)})
-                logger.exception('Falha ao coletar %s', url)
-            finally:
-                if page:
-                    page.close()
+    for url in rss_urls():
+        parsed = urlsplit(url)
+        source_name = 'We Work Remotely' if parsed.hostname and parsed.hostname.endswith('weworkremotely.com') else parsed.hostname or url
+        logger.info('Coletando feed RSS: %s', url)
+        try:
+            collected = parse_rss_jobs(url, max_jobs)
+            sources.append({'url': url, 'name': source_name,
+                            'status': 'ok' if collected else 'empty', 'jobCount': len(collected),
+                            'message': None if collected else 'Nenhuma vaga encontrada neste feed.'})
+            jobs.extend(collected)
+        except Exception as exc:
+            sources.append({'url': url, 'name': source_name,
+                            'status': 'unavailable', 'jobCount': 0, 'message': str(exc)})
+            logger.exception('Falha ao ler o feed RSS %s', url)
+
+    urls = scraper_urls()
+    if urls:
+        try:
+            with PlaywrightScraper() as scraper:
+                for url in urls:
+                    logger.info('Coletando fonte: %s', url)
+                    page = None
+                    try:
+                        page = scraper.fetch_page(url)
+                        collected = scraper.extract_jobs_from_page(page, max_jobs)
+                        logger.info('Fonte %s: %s vagas reais extraídas.', urlsplit(url).hostname, len(collected))
+                        sources.append({'url': url, 'name': urlsplit(url).hostname,
+                                        'status': 'ok' if collected else 'empty', 'jobCount': len(collected),
+                                        'message': None if collected else 'Nenhuma vaga encontrada nesta consulta.'})
+                        jobs.extend(collected)
+                    except Exception as exc:
+                        sources.append({'url': url, 'name': urlsplit(url).hostname,
+                                        'status': 'unavailable', 'jobCount': 0, 'message': str(exc)})
+                        logger.exception('Falha ao coletar %s', url)
+                    finally:
+                        if page:
+                            page.close()
+        except Exception as exc:
+            recorded = {source['url'] for source in sources}
+            for url in urls:
+                if url not in recorded:
+                    sources.append({'url': url, 'name': urlsplit(url).hostname,
+                                    'status': 'unavailable', 'jobCount': 0, 'message': str(exc)})
+            logger.exception('Falha no ciclo de vida do coletor de páginas')
     if not jobs:
         raise RuntimeError('Nenhuma vaga real coletada. Verifique seletores/bloqueios; demo é explícita.')
     jobs = list({(j['source'], j['source_url']): j for j in jobs}.values())

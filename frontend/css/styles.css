@@ -275,6 +275,26 @@ select { max-width: 100%; min-height: 42px; padding: 9px 30px 9px 12px; border: 
 .dashboard-footer { display: flex; justify-content: space-between; gap: var(--spacing-24); padding: var(--spacing-24) 0 var(--spacing-40); border-top: 1px solid var(--color-graphite-hairline); color: var(--color-ash-gray); font-size: var(--text-caption); }
 .dashboard-footer b { color: var(--color-bone-white); font-weight: 500; }
 
+.account-button { min-height: 44px; padding: 10px 14px; border: 1px solid var(--color-charcoal); border-radius: var(--radius-buttons); background: transparent; color: var(--color-bone-white); white-space: nowrap; }
+.account-button:hover { border-color: var(--color-iris-violet); }
+.account-dialog { width: min(520px, calc(100% - 32px)); max-height: calc(100dvh - 40px); margin: auto; padding: 28px; border: 1px solid var(--color-charcoal); border-radius: 16px; color: var(--color-bone-white); background: var(--surface-surface-lift); overflow-y: auto; }
+.account-dialog::backdrop { background: #000b; backdrop-filter: blur(5px); }
+.account-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.account-dialog-heading h2 { font-size: 22px; line-height: 1.4; }
+.account-tabs { display: flex; gap: 8px; margin: 20px 0; }
+.account-tabs button { flex: 1; min-height: 44px; color: var(--color-smoke-gray); border: 1px solid var(--color-charcoal); border-radius: 6px; background: transparent; }
+.account-tabs button[aria-pressed="true"] { border-color: var(--color-iris-violet); color: var(--color-iris-violet-glow); }
+.account-form { display: grid; gap: 16px; margin-top: 20px; }
+.account-form label { display: grid; gap: 8px; font-size: 14px; }
+.account-form [hidden], .account-dialog [hidden] { display: none; }
+.account-form input, .account-form select { width: 100%; min-height: 44px; padding: 12px; border: 1px solid var(--color-charcoal); border-radius: 6px; background: var(--surface-void); color: var(--color-bone-white); font: inherit; }
+.account-form input:focus-visible, .account-form select:focus-visible { outline: 2px solid var(--color-iris-violet); outline-offset: 2px; }
+.account-primary { min-height: 46px; margin-top: 8px; padding: 12px 20px; border: 0; border-radius: 6px; background: var(--gradient-iris-violet); color: #090511; font: inherit; font-weight: 600; }
+.account-dialog button:disabled { opacity: .6; cursor: wait; }
+.account-message { min-height: 20px; margin-top: 16px; font-size: 14px; line-height: 1.5; color: var(--color-pulse-green); }
+.account-message.error { color: var(--color-alarm-red); }
+.account-logout { margin-top: 24px; min-height: 44px; }
+
 /* Responsive layout */
 @media (max-width: 1120px) {
     .brand-tag, .header-label { display: none; }
@@ -294,7 +314,10 @@ select { max-width: 100%; min-height: 42px; padding: 9px 30px 9px 12px; border: 
     .brand-mark { width: 34px; height: 34px; font-size: 28px; }
     .site-header nav { gap: var(--spacing-16); font-size: var(--text-caption); }
     .site-header nav a { padding: var(--spacing-28) 0; }
-    .site-header nav a:last-child { display: none; }
+    .site-header { flex-wrap: wrap; padding-top: 16px; }
+    .site-header nav { order: 3; flex-basis: 100%; }
+    .site-header nav a { padding: 12px 0; }
+    .site-header .account-button { margin-left: auto; }
     .dashboard { padding-top: var(--spacing-40); }
     .page-heading { display: block; margin-bottom: var(--spacing-32); }
     .page-heading h1 { font-size: 40px; line-height: 1.15; letter-spacing: -1.8px; }
@@ -328,7 +351,6 @@ select { max-width: 100%; min-height: 42px; padding: 9px 30px 9px 12px; border: 
 }
 @media (max-width: 380px) {
     .site-header, .dashboard { width: calc(100% - 32px); }
-    .site-header nav a:nth-child(2) { display: none; }
     .stat-card { padding: var(--spacing-16); }
     .rank-name { font-size: var(--text-caption); }
     .ranking-row { grid-template-columns: 18px 82px minmax(0, 1fr) 24px; }

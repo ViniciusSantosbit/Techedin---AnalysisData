@@ -1,6 +1,7 @@
 import { validateSnapshot, summarize, technologySeries, readableDate, searchJobs } from './dashboard.mjs';
+import { resolveApiBase } from './api-config.mjs?v=20261014-01';
 
-const apiBase = window.TECHEDIN_API_BASE || 'http://localhost:8080';
+const apiBase = resolveApiBase(window.location, window.TECHEDIN_API_BASE);
 const $ = id => document.getElementById(id);
 let snapshot, summary, chart, selectedTechnology = '', jobFilter = '', loading = false, visibleJobs = 8;
 const theme = getComputedStyle(document.documentElement);

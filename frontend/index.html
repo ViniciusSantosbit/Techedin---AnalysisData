@@ -8,14 +8,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=20261012-02">
+    <link rel="stylesheet" href="css/styles.css?v=20261014-01">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script>
 </head>
 <body>
     <header class="site-header">
         <a class="brand" href="#" aria-label="Techedin início"><span class="brand-mark">t<span>·</span></span>techedin<span class="brand-tag">market intelligence</span></a>
         <nav aria-label="Navegação principal"><a class="nav-active" href="#overview">Visão geral</a><a href="#jobs-section">Vagas coletadas</a><a href="#sources-section">Fontes</a></nav>
-        <span class="header-label"><span class="live-dot"></span>Dados de vagas públicas</span>
+        <button id="account-open" class="account-button" type="button">Minha conta</button>
     </header>
 
     <main class="dashboard" id="overview">
@@ -60,7 +60,35 @@
         </section>
         <footer class="dashboard-footer"><span><b>techedin</b> · Mais contexto para suas decisões.</span><span id="footer-provenance">Dados públicos · Amostra de vagas de TI</span></footer>
     </main>
+    <dialog id="account-dialog" class="account-dialog" aria-labelledby="account-heading">
+        <div class="account-dialog-heading"><h2 id="account-heading">Sua próxima oportunidade</h2><button id="account-close" class="text-button" type="button" aria-label="Fechar conta">Fechar</button></div>
+        <p id="account-message" class="account-message" role="status" aria-live="polite"></p>
+        <section id="account-auth">
+            <div class="account-tabs"><button id="account-login-tab" type="button" aria-pressed="true">Entrar</button><button id="account-register-tab" type="button" aria-pressed="false">Criar conta</button></div>
+            <form id="account-auth-form" class="account-form">
+                <label id="account-name-label" hidden>Nome<input id="account-name" name="displayName" autocomplete="name" maxlength="100" disabled></label>
+                <label>E-mail<input id="account-email" name="email" type="email" autocomplete="username" maxlength="254" required></label>
+                <label>Senha<input id="account-password" name="password" type="password" autocomplete="current-password" maxlength="64" required></label>
+                <p id="account-password-hint" class="panel-note" hidden>Use de 12 a 64 caracteres. Senhas com acentos ou emojis podem ter um limite menor.</p>
+                <button id="account-submit" class="account-primary" type="submit">Entrar</button>
+            </form>
+        </section>
+        <section id="account-profile" hidden>
+            <p class="panel-note">Salve seus objetivos para preparar as próximas recomendações de vagas.</p>
+            <form id="account-preferences-form" class="account-form">
+                <label>Nome<input name="displayName" autocomplete="name" maxlength="100" required></label>
+                <label>E-mail<input id="account-profile-email" type="email" disabled></label>
+                <label>Cargo desejado<input name="targetRole" maxlength="120" placeholder="Ex.: Desenvolvimento backend"></label>
+                <label>Cidade ou região<input name="location" maxlength="120" placeholder="Ex.: São Paulo, SP"></label>
+                <label>Modelo de trabalho<select name="workModel"><option value="any">Sem preferência</option><option value="remote">Remoto</option><option value="hybrid">Híbrido</option><option value="onsite">Presencial</option></select></label>
+                <label>Senioridade desejada<select name="seniority"><option value="any">Sem preferência</option><option value="internship">Estágio</option><option value="junior">Júnior</option><option value="mid">Pleno</option><option value="senior">Sênior</option><option value="specialist">Especialista</option></select></label>
+                <button class="account-primary" type="submit">Salvar preferências</button>
+            </form>
+            <button id="account-logout" class="text-button account-logout" type="button">Sair da conta</button>
+        </section>
+    </dialog>
     <noscript>Ative o JavaScript para consultar os gráficos e as vagas.</noscript>
-    <script type="module" src="js/app.js?v=20261012-02"></script>
+    <script type="module" src="js/app.js?v=20261014-03"></script>
+    <script type="module" src="js/account.js?v=20261014-04"></script>
 </body>
 </html>
