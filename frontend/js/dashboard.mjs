@@ -58,3 +58,14 @@ export function searchJobs(jobs, term, technology) {
     return jobs.filter(job => (!technology || job.technologies.includes(technology))
         && normalize([job.title, job.company, ...job.technologies].join(' ')).includes(search));
 }
+
+export function describeSource(source) {
+    const labels = { ok: 'Coletada', cached: 'Em cache', stale: 'Anterior', unavailable: 'Indisponível', empty: 'Sem resultados', stored: 'No banco' };
+    let description = `${source.jobCount} vagas desta fonte na amostra`;
+    if (source.status === 'stale') description = 'Fonte indisponível; última coleta válida preservada';
+    else if (source.status === 'empty') description = 'A consulta não retornou vagas com os critérios atuais';
+    else if (source.status === 'unavailable') description = source.message?.includes('403') ? 'Portal respondeu HTTP 403 nesta coleta' : 'Fonte indisponível nesta consulta';
+    if (source.name === 'Remotive') description += ' · API com atraso de 24h';
+    return { label: labels[source.status] || 'Não verificada', description,
+        warning: ['unavailable', 'stale'].includes(source.status) };
+}

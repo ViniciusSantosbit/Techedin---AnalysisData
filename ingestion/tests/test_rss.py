@@ -1,6 +1,7 @@
 import importlib.util
 import io
 import unittest
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -11,6 +12,14 @@ FEED = 'https://weworkremotely.com/categories/remote-programming-jobs.rss'
 
 
 class RssTests(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        cache = patch.dict(scraper.os.environ, {'SCRAPER_CACHE_DIR': directory.name})
+        cache.start(); self.addCleanup(cache.stop)
+        sources = patch.object(scraper, 'api_sources', return_value=[])
+        sources.start(); self.addCleanup(sources.stop)
+
     def read(self, xml):
         response = io.BytesIO(xml.encode())
         response.status = 200

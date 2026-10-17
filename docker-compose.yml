@@ -43,8 +43,14 @@ services:
       DB_USER: postgres
       DB_PASSWORD: ${LOCAL_DB_PASSWORD:-postgres}
       DB_SSLMODE: disable
+      SCRAPER_REMOTIVE_ENABLED: ${SCRAPER_REMOTIVE_ENABLED:-true}
+      SCRAPER_NUBANK_ENABLED: ${SCRAPER_NUBANK_ENABLED:-true}
+      SCRAPER_CACHE_DIR: /app/.cache/ingestion
+    volumes:
+      - scraper-cache:/app/.cache/ingestion
     depends_on:
       db:
         condition: service_healthy
 volumes:
   pgdata:
+  scraper-cache:

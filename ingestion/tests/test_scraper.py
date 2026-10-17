@@ -52,6 +52,10 @@ class ParsingTests(unittest.TestCase):
         with patch.dict(scraper.os.environ, {'SCRAPER_URLS': 'https://portal.gupy.io/job-search?term=desenvolvedor'}):
             self.assertEqual(scraper.scraper_urls(), ['https://portal.gupy.io/job-search/term=desenvolvedor'])
 
+    def test_home_pages_are_mapped_to_actual_searches(self):
+        with patch.dict(scraper.os.environ, {'SCRAPER_URLS': 'https://www.gupy.io/empregos,https://www.catho.com.br'}):
+            self.assertEqual(scraper.scraper_urls(), ['https://portal.gupy.io/job-search/term=desenvolvedor', 'https://www.catho.com.br/vagas/desenvolvedor/'])
+
     def test_demo_is_rich_and_rejected_before_connection(self):
         jobs = scraper.demo_jobs()
         self.assertEqual(len(jobs), 10)
@@ -95,6 +99,24 @@ class TransactionTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 scraper.PostgresJobRepository().upsert_jobs_and_facts([job])
         self.assertIs(conn.__exit__.call_args.args[0], ValueError)
+        conn.close.assert_called_once()
+
+    def test_bulk_facts_reuses_dimensions_and_duplicate_job_identity(self):
+        conn = Mock(); cursor = Mock()
+        conn.__enter__ = Mock(return_value=conn);conn.__exit__ = Mock(return_value=False)
+        cursor.__enter__ = Mock(return_value=cursor);cursor.__exit__ = Mock(return_value=False)
+        conn.cursor.return_value = cursor
+        cursor.fetchall.return_value = [(7, 'Python')]
+        day = date(2026, 10, 12)
+        cursor.fetchone.side_effect = [(1, day), (2,), (3,), (4, day)]
+        job = {**scraper.demo_jobs()[0], 'is_demo': False, 'technologies': ['Python', 'Python']}
+        other = {**job, 'source_url': job['source_url'] + '/other'}
+        with patch.object(scraper.PostgresJobRepository, '_connect', return_value=conn), patch.object(scraper, 'execute_values') as bulk:
+            count = scraper.PostgresJobRepository().upsert_jobs_and_facts([job, job, other])
+        self.assertEqual(count, 2)
+        self.assertEqual(bulk.call_count, 1)
+        self.assertEqual(bulk.call_args.args[2], [(1,7,2,3,1), (4,7,2,3,1)])
+        self.assertEqual(sum('INSERT INTO dim_date' in str(call) for call in cursor.execute.call_args_list), 1)
         conn.close.assert_called_once()
 
 

@@ -2,6 +2,11 @@ import { resolveApiBase } from './api-config.mjs?v=20261014-01';
 const apiBase = resolveApiBase(window.location, window.TECHEDIN_API_BASE);
 const $ = id => document.getElementById(id);
 let account = null, registering = false, busy = false;
+let recommendationsGeneration = 0;
+let chatResumeRevision = null;
+let chatHistory = [], chatGeneration = 0, chatPending = false;
+let openResumeAfterLogin = false;
+let resume = null, resumeLoaded = false, resumeOwner = null;
 
 function message(text, error = false) {
     $('account-message').textContent = text;
@@ -12,12 +17,13 @@ async function request(path, method = 'GET', body) {
     if (method !== 'GET') {
         const csrf = await request('/api/auth/csrf');
         headers[csrf.headerName] = csrf.token;
-        if (body !== undefined) headers['Content-Type'] = 'application/json';
+        if (body !== undefined && !(body instanceof FormData)) headers['Content-Type'] = 'application/json';
     }
     let response;
     try {
         response = await fetch(apiBase + path, { method, headers, credentials: 'include', cache: 'no-store',
-            signal: AbortSignal.timeout(12000), body: body === undefined ? undefined : JSON.stringify(body) });
+            signal: AbortSignal.timeout((path.endsWith('/evaluation') || path.endsWith('/career-chat')) ? 55000 : body instanceof FormData ? 30000 : 12000),
+            body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body) });
     } catch {
         throw new Error('Não foi possível conectar à sua conta. Tente novamente em alguns instantes.');
     }
@@ -30,9 +36,18 @@ async function request(path, method = 'GET', body) {
     return result;
 }
 function render() {
+    if (resumeOwner !== (account?.id || null)) {
+        resumeOwner = account?.id || null; resume = null; resumeLoaded = false; renderResume();
+        resetChat(); $('career-chat').hidden = true; $('career-chat-open').setAttribute('aria-expanded', 'false');
+    }
     $('account-auth').hidden = !!account;
     $('account-profile').hidden = !account;
-    $('account-open').textContent = account ? 'Meu perfil' : 'Minha conta';
+    $('account-open').textContent = account ? `Bem-vindo, ${account.displayName}` : 'Minha conta';
+    $('resume-open').hidden = !account;
+    $('career-chat-open').hidden = !account;
+    $('recommendations-section').hidden = !account;
+    if (account) loadRecommendations();
+    else { recommendationsGeneration++; $('recommendations-list').replaceChildren(); $('recommendations-profile').textContent = ''; $('recommendations-status').textContent = ''; }
     $('account-heading').textContent = account ? 'Seu perfil profissional' : 'Sua próxima oportunidade';
     if (!account) return;
     const form = $('account-preferences-form');
@@ -58,20 +73,22 @@ function mode(value) {
 async function action(work) {
     if (busy) return;
     busy = true;
-    const buttons = [...$('account-dialog').querySelectorAll('button')].filter(button => button.id !== 'account-close');
+    const buttons = [...document.querySelectorAll('#account-dialog button, #resume-dialog button, #resume-open, #account-open')].filter(button => !['account-close', 'resume-close'].includes(button.id));
     buttons.forEach(button => button.disabled = true);
     message('Aguarde…');
     try { await work(); }
     catch (error) { message(error.message, true); }
-    finally { busy = false; buttons.forEach(button => button.disabled = false); }
+    finally { busy = false; buttons.forEach(button => button.disabled = false); syncResumeControls(); }
 }
 $('account-open').addEventListener('click', () => {
+    openResumeAfterLogin = false;
     $('account-dialog').showModal();
     action(async () => {
         const session = await request('/api/auth/session');
         account = session.authenticated ? session.account : null;
         message('');
         render();
+
     });
 });
 $('account-close').addEventListener('click', () => $('account-dialog').close());
@@ -86,6 +103,12 @@ $('account-auth-form').addEventListener('submit', event => {
         account = await request('/api/auth/' + (registering ? 'register' : 'login'), 'POST', body);
         $('account-auth-form').reset();
         render(); message('Você está conectado. Suas preferências ficam vinculadas à sua conta.');
+        if (openResumeAfterLogin) {
+            openResumeAfterLogin = false;
+            $('account-dialog').close();
+            $('resume-dialog').showModal();
+            await loadResume();
+        }
     });
 });
 $('account-preferences-form').addEventListener('submit', event => {
@@ -105,3 +128,253 @@ $('account-logout').addEventListener('click', () => action(async () => {
     account = null; $('account-preferences-form').reset(); $('account-profile-email').value = '';
     mode(false); render(); message('Você saiu da sua conta.');
 }));
+
+function resumeMessage(text, error = false) {
+    $('resume-status').textContent = text;
+    $('resume-status').classList.toggle('error', error);
+}
+function syncResumeControls() {
+    $('resume-upload-controls').disabled = busy || !resumeLoaded;
+    $('resume-evaluate').disabled = busy || !resume;
+    $('resume-review-controls').disabled = busy || !resume;
+}
+function renderResume() {
+    $('resume-evaluation-result').hidden = true;
+    $('resume-evaluation-result').replaceChildren();
+    $('resume-evaluation-status').textContent = '';
+    $('resume-details').hidden = !resume;
+    $('resume-delete-confirm').hidden = true;
+    $('resume-upload-form').reset();
+    $('resume-upload').textContent = resume ? 'Substituir currículo' : 'Anexar currículo';
+    $('resume-text').value = resume?.text || '';
+    $('resume-file-info').textContent = resume
+        ? `${resume.fileName} · ${Math.ceil(resume.fileSize / 1024)} KB · Enviado em ${new Date(resume.uploadedAt).toLocaleDateString('pt-BR')}` : '';
+    $('resume-text-count').textContent = resume ? `${resume.text.length.toLocaleString('pt-BR')} / 100.000 caracteres` : '';
+    if (!resume) resumeMessage('');
+    syncResumeControls();
+}
+async function loadResume() {
+    resumeLoaded = false; syncResumeControls(); resumeMessage('Carregando currículo…');
+    try {
+        const result = await request('/api/account/resume');
+        resume = result.resume; resumeLoaded = true; renderResume();
+        resumeMessage(resume ? 'Texto disponível para revisão.' : 'Você ainda não anexou um currículo.');
+        if (resume) {
+            try {
+                const status = await request('/api/account/resume/evaluation');
+                if (!status.configured) $('resume-evaluation-status').textContent = 'Configure GEMINI_API_KEY no servidor e reinicie a API para habilitar a nota.';
+            } catch { $('resume-evaluation-status').textContent = 'Clique em avaliar para solicitar a nota.'; }
+        }
+    } catch (error) { resumeMessage(error.message, true); }
+}
+function resumeAction(work) {
+    return action(async () => {
+        syncResumeControls();
+        try { await work(); }
+        catch (error) {
+            resumeMessage(error.message, true);
+            if (error.status === 401) { account = null; render(); }
+            throw error;
+        }
+    });
+}
+$('resume-upload-form').addEventListener('submit', event => {
+    event.preventDefault();
+    const file = $('resume-file').files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { resumeMessage('O currículo deve ter no máximo 5 MB.', true); return; }
+    if (!/\.(pdf|docx)$/i.test(file.name)) { resumeMessage('Use um arquivo PDF ou DOCX.', true); return; }
+    resumeAction(async () => {
+        resumeMessage('Lendo o currículo…');
+        const body = new FormData(); body.append('file', file);
+        if (resume) body.append('revision', resume.revision);
+        const result = await request('/api/account/resume', 'POST', body);
+        resume = result.resume; renderResume(); resetChat(); loadRecommendations();
+        message('Currículo salvo.'); resumeMessage('Confira abaixo se o texto foi extraído corretamente.');
+    });
+});
+$('resume-review-form').addEventListener('submit', event => {
+    event.preventDefault();
+    if (!resume) return;
+    resumeAction(async () => {
+        const result = await request('/api/account/resume', 'PUT', { revision: resume.revision, text: $('resume-text').value });
+        resume = result.resume; renderResume(); resetChat(); loadRecommendations(); message('Correções salvas.'); resumeMessage('Texto do currículo atualizado.');
+    });
+});
+$('resume-text').addEventListener('input', () => {
+    $('resume-text-count').textContent = `${$('resume-text').value.length.toLocaleString('pt-BR')} / 100.000 caracteres`;
+});
+$('resume-delete').addEventListener('click', () => { $('resume-delete-confirm').hidden = false; });
+$('resume-delete-cancel').addEventListener('click', () => { $('resume-delete-confirm').hidden = true; });
+$('resume-delete-yes').addEventListener('click', () => {
+    if (!resume) return;
+    resumeAction(async () => {
+        await request('/api/account/resume', 'DELETE', { revision: resume.revision });
+        resume = null; renderResume(); resetChat(); loadRecommendations(); message('Currículo removido.'); resumeMessage('O texto do currículo foi excluído do seu perfil.');
+    });
+});
+
+$('resume-evaluate').addEventListener('click', () => {
+    if (!resume) return;
+    if ($('resume-text').value !== resume.text) {
+        $('resume-evaluation-status').textContent = 'Salve as correções antes de avaliar.';
+        return;
+    }
+    resumeAction(async () => {
+        $('resume-evaluation-result').hidden = true;
+        $('resume-evaluation-status').textContent = 'Avaliando com Gemini… Isso pode levar alguns segundos.';
+        try {
+            const result = await request('/api/account/resume/evaluation', 'POST', { revision: resume.revision });
+            const container = $('resume-evaluation-result');
+            container.replaceChildren();
+            const score = document.createElement('h3');
+            score.textContent = `Nota do currículo: ${result.score.toLocaleString('pt-BR')} / 10`;
+            container.append(score);
+            for (const item of result.criteria) {
+                const paragraph = document.createElement('p');
+                paragraph.textContent = `${item.name}: ${item.score.toLocaleString('pt-BR')} / 2 — ${item.feedback}`;
+                container.append(paragraph);
+            }
+            const suggestions = document.createElement('p');
+            suggestions.textContent = result.suggestions;
+            container.append(suggestions); container.hidden = false;
+            $('resume-evaluation-status').textContent = 'Avaliação concluída. A nota fica disponível nesta tela até recarregar ou alterar o currículo.';
+            message('Currículo avaliado.');
+        } catch (error) {
+            $('resume-evaluation-status').textContent = error.message;
+            throw error;
+        }
+    });
+});
+$('resume-text').addEventListener('input', () => {
+    $('resume-evaluation-result').hidden = true;
+    $('resume-evaluation-status').textContent = 'Salve as correções e avalie novamente para atualizar a nota.';
+});
+
+$('resume-open').addEventListener('click', () => action(async () => {
+    const session = await request('/api/auth/session');
+    account = session.authenticated ? session.account : null;
+    render();
+    if (!account) {
+        openResumeAfterLogin = true;
+        $('account-dialog').showModal();
+        message('Entre na sua conta para acessar seu currículo.');
+        return;
+    }
+    $('resume-dialog').showModal();
+    message('');
+    await loadResume();
+}));
+$('resume-close').addEventListener('click', () => $('resume-dialog').close());
+
+// Restore the header state when an existing session survives a page reload.
+request('/api/auth/session').then(session => {
+    if (busy) return;
+    account = session.authenticated ? session.account : null;
+    render();
+}).catch(() => { /* Account access displays connection errors when opened. */ });
+
+function resetChat() {
+    chatGeneration++; chatHistory = []; chatResumeRevision = null; chatPending = false;
+    $('career-chat-messages').replaceChildren();
+    $('career-chat-status').textContent = '';
+    $('career-chat-input').value = '';
+    $('career-chat-send').disabled = false;
+}
+function chatMessage(role, text) {
+    const paragraph = document.createElement('p');
+    paragraph.className = 'career-chat-message ' + role;
+    paragraph.textContent = (role === 'user' ? 'Você: ' : 'Assistente: ') + text;
+    $('career-chat-messages').append(paragraph);
+    while ($('career-chat-messages').children.length > 16) $('career-chat-messages').firstElementChild.remove();
+    paragraph.scrollIntoView({ block: 'nearest' });
+}
+$('career-chat-open').addEventListener('click', () => {
+    const open = $('career-chat').hidden;
+    $('career-chat').hidden = !open;
+    $('career-chat-open').setAttribute('aria-expanded', String(open));
+    if (open) $('career-chat-input').focus();
+});
+$('career-chat-close').addEventListener('click', () => {
+    $('career-chat').hidden = true;
+    $('career-chat-open').setAttribute('aria-expanded', 'false');
+    $('career-chat-open').focus();
+});
+$('career-chat').addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); $('career-chat-close').click(); }
+});
+$('career-chat-clear').addEventListener('click', resetChat);
+$('career-chat-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (chatPending || !account) return;
+    const text = $('career-chat-input').value.trim();
+    if (!text) return;
+    const generation = chatGeneration;
+    chatPending = true; $('career-chat-send').disabled = true;
+    $('career-chat-status').textContent = 'O assistente está respondendo…';
+    try {
+        const answer = await request('/api/account/career-chat', 'POST', {
+            message: text, history: chatHistory.slice(-8), resumeRevision: chatResumeRevision
+        });
+        if (generation !== chatGeneration) return;
+        if (chatResumeRevision !== answer.resumeRevision) { chatHistory = []; $('career-chat-messages').replaceChildren(); }
+        chatResumeRevision = answer.resumeRevision;
+        chatMessage('user', text); chatMessage('model', answer.text);
+        chatHistory.push({ role: 'user', text }, { role: 'model', text: answer.text });
+        chatHistory = chatHistory.slice(-8);
+        $('career-chat-input').value = '';
+        $('career-chat-status').textContent = '';
+    } catch (error) {
+        if (generation !== chatGeneration) return;
+        $('career-chat-status').textContent = error.message;
+        if (error.status === 401) { account = null; render(); }
+    } finally {
+        if (generation === chatGeneration) { chatPending = false; $('career-chat-send').disabled = false; }
+    }
+});
+
+async function loadRecommendations() {
+    if (!account) return;
+    const generation = ++recommendationsGeneration;
+    $('recommendations-refresh').disabled = true;
+    $('recommendations-list').replaceChildren();
+    $('recommendations-profile').textContent = '';
+    $('recommendations-status').textContent = 'Comparando seu currículo com as vagas coletadas…';
+    try {
+        const result = await request('/api/account/recommendations');
+        if (generation !== recommendationsGeneration) return;
+        if (result.state === 'no_resume') {
+            $('recommendations-status').textContent = 'Anexe seu currículo em “Meu currículo” para receber sugestões.';
+            return;
+        }
+        $('recommendations-profile').textContent = 'Tecnologias identificadas no texto: ' + (result.skills.join(', ') || 'nenhuma do catálogo atual') + '.';
+        $('recommendations-status').textContent = result.matches.length
+            ? `${result.matches.length} sugestões na amostra de ${result.sampleSize} vagas. Ordenadas por correspondência de tecnologias, cargo e senioridade.`
+            : 'Não encontramos correspondências nesta amostra. Revise seu currículo e as preferências de senioridade ou aguarde novas vagas.';
+        for (const match of result.matches) {
+            let url;
+            try { url = new URL(match.job.url); if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) continue; } catch { continue; }
+            const card = document.createElement('article'); card.className = 'recommendation-card';
+            const title = document.createElement('h3'); title.textContent = match.job.title;
+            const company = document.createElement('p'); company.className = 'panel-note';
+            company.textContent = `${match.job.company} · ${match.job.source} · ${match.job.seniority}`;
+            const skills = document.createElement('p'); skills.textContent = 'Em comum: ' + match.matchedSkills.join(', ');
+            const reasons = document.createElement('p'); reasons.className = 'panel-note'; reasons.textContent = match.reasons.join(' ');
+            card.append(title, company, skills, reasons);
+            if (match.otherSkills.length) {
+                const missing = document.createElement('p'); missing.className = 'panel-note';
+                missing.textContent = 'Também citadas na vaga, não identificadas no currículo: ' + match.otherSkills.join(', ') + '. Confira se são exigências ou diferenciais.';
+                card.append(missing);
+            }
+            const link = document.createElement('a'); link.href = url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = 'Conferir vaga na origem ↗';
+            card.append(link); $('recommendations-list').append(card);
+        }
+    } catch (error) {
+        if (generation !== recommendationsGeneration) return;
+        $('recommendations-status').textContent = error.message;
+        if (error.status === 401) { account = null; render(); }
+    } finally {
+        if (generation === recommendationsGeneration) $('recommendations-refresh').disabled = false;
+    }
+}
+$('recommendations-refresh').addEventListener('click', loadRecommendations);

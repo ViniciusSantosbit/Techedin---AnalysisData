@@ -10,7 +10,7 @@ public class WebConfig implements WebMvcConfigurer {
     public WebConfig(@Value("${app.cors.allowed-origins}") String[] origins) { this.origins = origins; }
     @Override public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**").allowedOrigins(origins)
-            .allowedMethods("GET", "POST", "PUT", "OPTIONS")
+            .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
             .allowedHeaders("Content-Type", "X-CSRF-TOKEN", "X-Admin-Token")
             .allowCredentials(true);
     }

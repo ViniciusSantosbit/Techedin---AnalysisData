@@ -1,0 +1,1017 @@
+[
+  {
+    "name": "Python",
+    "category": "Tecnologia",
+    "aliases": [
+      "python"
+    ]
+  },
+  {
+    "name": "Java",
+    "category": "Tecnologia",
+    "aliases": [
+      "java"
+    ]
+  },
+  {
+    "name": "JavaScript",
+    "category": "Tecnologia",
+    "aliases": [
+      "javascript"
+    ]
+  },
+  {
+    "name": "HTML",
+    "category": "Tecnologia",
+    "aliases": [
+      "html"
+    ]
+  },
+  {
+    "name": "CSS",
+    "category": "Tecnologia",
+    "aliases": [
+      "css"
+    ]
+  },
+  {
+    "name": "Node.js",
+    "category": "Tecnologia",
+    "aliases": [
+      "node.js"
+    ]
+  },
+  {
+    "name": "PostgreSQL",
+    "category": "Tecnologia",
+    "aliases": [
+      "postgresql"
+    ]
+  },
+  {
+    "name": "SQL",
+    "category": "Tecnologia",
+    "aliases": [
+      "sql"
+    ]
+  },
+  {
+    "name": "AWS",
+    "category": "Tecnologia",
+    "aliases": [
+      "aws"
+    ]
+  },
+  {
+    "name": "Docker",
+    "category": "Tecnologia",
+    "aliases": [
+      "docker"
+    ]
+  },
+  {
+    "name": "Git",
+    "category": "Tecnologia",
+    "aliases": [
+      "git"
+    ]
+  },
+  {
+    "name": "React",
+    "category": "Tecnologia",
+    "aliases": [
+      "react"
+    ]
+  },
+  {
+    "name": "Angular",
+    "category": "Tecnologia",
+    "aliases": [
+      "angular"
+    ]
+  },
+  {
+    "name": "Vue",
+    "category": "Tecnologia",
+    "aliases": [
+      "vue",
+      "vue.js",
+      "vuejs"
+    ]
+  },
+  {
+    "name": "TypeScript",
+    "category": "Tecnologia",
+    "aliases": [
+      "typescript"
+    ]
+  },
+  {
+    "name": "Spring Boot",
+    "category": "Tecnologia",
+    "aliases": [
+      "spring"
+    ]
+  },
+  {
+    "name": "django",
+    "category": "Tecnologia",
+    "aliases": [
+      "django"
+    ]
+  },
+  {
+    "name": "flask",
+    "category": "Tecnologia",
+    "aliases": [
+      "flask"
+    ]
+  },
+  {
+    "name": "fastapi",
+    "category": "Tecnologia",
+    "aliases": [
+      "fastapi"
+    ]
+  },
+  {
+    "name": "express",
+    "category": "Tecnologia",
+    "aliases": [
+      "express"
+    ]
+  },
+  {
+    "name": "Kubernetes",
+    "category": "Tecnologia",
+    "aliases": [
+      "kubernetes",
+      "k8s"
+    ]
+  },
+  {
+    "name": "linux",
+    "category": "Tecnologia",
+    "aliases": [
+      "linux"
+    ]
+  },
+  {
+    "name": "bash",
+    "category": "Tecnologia",
+    "aliases": [
+      "bash",
+      "shell"
+    ]
+  },
+  {
+    "name": "C#",
+    "category": "Tecnologia",
+    "aliases": [
+      "c#",
+      "csharp"
+    ]
+  },
+  {
+    "name": ".NET",
+    "category": "Tecnologia",
+    "aliases": [
+      ".net",
+      "dotnet"
+    ]
+  },
+  {
+    "name": "Azure",
+    "category": "Tecnologia",
+    "aliases": [
+      "azure"
+    ]
+  },
+  {
+    "name": "GCP",
+    "category": "Tecnologia",
+    "aliases": [
+      "gcp",
+      "google cloud"
+    ]
+  },
+  {
+    "name": "terraform",
+    "category": "Tecnologia",
+    "aliases": [
+      "terraform"
+    ]
+  },
+  {
+    "name": "ansible",
+    "category": "Tecnologia",
+    "aliases": [
+      "ansible"
+    ]
+  },
+  {
+    "name": "jenkins",
+    "category": "Tecnologia",
+    "aliases": [
+      "jenkins"
+    ]
+  },
+  {
+    "name": "github actions",
+    "category": "Tecnologia",
+    "aliases": [
+      "github actions"
+    ]
+  },
+  {
+    "name": "gitlab ci",
+    "category": "Tecnologia",
+    "aliases": [
+      "gitlab ci"
+    ]
+  },
+  {
+    "name": "ci/cd",
+    "category": "Tecnologia",
+    "aliases": [
+      "ci/cd"
+    ]
+  },
+  {
+    "name": "microservices",
+    "category": "Tecnologia",
+    "aliases": [
+      "microservices",
+      "microserviços"
+    ]
+  },
+  {
+    "name": "rest",
+    "category": "Tecnologia",
+    "aliases": [
+      "rest"
+    ]
+  },
+  {
+    "name": "graphql",
+    "category": "Tecnologia",
+    "aliases": [
+      "graphql"
+    ]
+  },
+  {
+    "name": "api",
+    "category": "Tecnologia",
+    "aliases": [
+      "api"
+    ]
+  },
+  {
+    "name": "mongodb",
+    "category": "Tecnologia",
+    "aliases": [
+      "mongodb"
+    ]
+  },
+  {
+    "name": "redis",
+    "category": "Tecnologia",
+    "aliases": [
+      "redis"
+    ]
+  },
+  {
+    "name": "kafka",
+    "category": "Tecnologia",
+    "aliases": [
+      "kafka"
+    ]
+  },
+  {
+    "name": "rabbitmq",
+    "category": "Tecnologia",
+    "aliases": [
+      "rabbitmq"
+    ]
+  },
+  {
+    "name": "elasticsearch",
+    "category": "Tecnologia",
+    "aliases": [
+      "elasticsearch"
+    ]
+  },
+  {
+    "name": "prometheus",
+    "category": "Tecnologia",
+    "aliases": [
+      "prometheus"
+    ]
+  },
+  {
+    "name": "grafana",
+    "category": "Tecnologia",
+    "aliases": [
+      "grafana"
+    ]
+  },
+  {
+    "name": "machine learning",
+    "category": "Tecnologia",
+    "aliases": [
+      "machine learning",
+      "ml"
+    ]
+  },
+  {
+    "name": "ai",
+    "category": "Tecnologia",
+    "aliases": [
+      "ai"
+    ]
+  },
+  {
+    "name": "tensorflow",
+    "category": "Tecnologia",
+    "aliases": [
+      "tensorflow"
+    ]
+  },
+  {
+    "name": "pytorch",
+    "category": "Tecnologia",
+    "aliases": [
+      "pytorch"
+    ]
+  },
+  {
+    "name": "pandas",
+    "category": "Tecnologia",
+    "aliases": [
+      "pandas"
+    ]
+  },
+  {
+    "name": "numpy",
+    "category": "Tecnologia",
+    "aliases": [
+      "numpy"
+    ]
+  },
+  {
+    "name": "scikit-learn",
+    "category": "Tecnologia",
+    "aliases": [
+      "scikit-learn"
+    ]
+  },
+  {
+    "name": "data science",
+    "category": "Tecnologia",
+    "aliases": [
+      "data science"
+    ]
+  },
+  {
+    "name": "big data",
+    "category": "Tecnologia",
+    "aliases": [
+      "big data"
+    ]
+  },
+  {
+    "name": "spark",
+    "category": "Tecnologia",
+    "aliases": [
+      "spark"
+    ]
+  },
+  {
+    "name": "hadoop",
+    "category": "Tecnologia",
+    "aliases": [
+      "hadoop"
+    ]
+  },
+  {
+    "name": "airflow",
+    "category": "Tecnologia",
+    "aliases": [
+      "airflow"
+    ]
+  },
+  {
+    "name": "dbt",
+    "category": "Tecnologia",
+    "aliases": [
+      "dbt"
+    ]
+  },
+  {
+    "name": "snowflake",
+    "category": "Tecnologia",
+    "aliases": [
+      "snowflake"
+    ]
+  },
+  {
+    "name": "databricks",
+    "category": "Tecnologia",
+    "aliases": [
+      "databricks"
+    ]
+  },
+  {
+    "name": "Go",
+    "category": "Tecnologia",
+    "aliases": [
+      "go",
+      "golang"
+    ]
+  },
+  {
+    "name": "rust",
+    "category": "Tecnologia",
+    "aliases": [
+      "rust"
+    ]
+  },
+  {
+    "name": "ruby",
+    "category": "Tecnologia",
+    "aliases": [
+      "ruby"
+    ]
+  },
+  {
+    "name": "rails",
+    "category": "Tecnologia",
+    "aliases": [
+      "rails"
+    ]
+  },
+  {
+    "name": "php",
+    "category": "Tecnologia",
+    "aliases": [
+      "php"
+    ]
+  },
+  {
+    "name": "laravel",
+    "category": "Tecnologia",
+    "aliases": [
+      "laravel"
+    ]
+  },
+  {
+    "name": "symfony",
+    "category": "Tecnologia",
+    "aliases": [
+      "symfony"
+    ]
+  },
+  {
+    "name": "wordpress",
+    "category": "Tecnologia",
+    "aliases": [
+      "wordpress"
+    ]
+  },
+  {
+    "name": "swift",
+    "category": "Tecnologia",
+    "aliases": [
+      "swift"
+    ]
+  },
+  {
+    "name": "kotlin",
+    "category": "Tecnologia",
+    "aliases": [
+      "kotlin"
+    ]
+  },
+  {
+    "name": "flutter",
+    "category": "Tecnologia",
+    "aliases": [
+      "flutter"
+    ]
+  },
+  {
+    "name": "react native",
+    "category": "Tecnologia",
+    "aliases": [
+      "react native"
+    ]
+  },
+  {
+    "name": "xamarin",
+    "category": "Tecnologia",
+    "aliases": [
+      "xamarin"
+    ]
+  },
+  {
+    "name": "unity",
+    "category": "Tecnologia",
+    "aliases": [
+      "unity"
+    ]
+  },
+  {
+    "name": "unreal",
+    "category": "Tecnologia",
+    "aliases": [
+      "unreal"
+    ]
+  },
+  {
+    "name": "C++",
+    "category": "Tecnologia",
+    "aliases": [
+      "c++",
+      "cpp"
+    ]
+  },
+  {
+    "name": "scala",
+    "category": "Tecnologia",
+    "aliases": [
+      "scala"
+    ]
+  },
+  {
+    "name": "clojure",
+    "category": "Tecnologia",
+    "aliases": [
+      "clojure"
+    ]
+  },
+  {
+    "name": "elixir",
+    "category": "Tecnologia",
+    "aliases": [
+      "elixir"
+    ]
+  },
+  {
+    "name": "erlang",
+    "category": "Tecnologia",
+    "aliases": [
+      "erlang"
+    ]
+  },
+  {
+    "name": "haskell",
+    "category": "Tecnologia",
+    "aliases": [
+      "haskell"
+    ]
+  },
+  {
+    "name": "F#",
+    "category": "Tecnologia",
+    "aliases": [
+      "f#",
+      "fsharp"
+    ]
+  },
+  {
+    "name": "ocaml",
+    "category": "Tecnologia",
+    "aliases": [
+      "ocaml"
+    ]
+  },
+  {
+    "name": "R",
+    "category": "Tecnologia",
+    "aliases": [
+      "r"
+    ]
+  },
+  {
+    "name": "matlab",
+    "category": "Tecnologia",
+    "aliases": [
+      "matlab"
+    ]
+  },
+  {
+    "name": "julia",
+    "category": "Tecnologia",
+    "aliases": [
+      "julia"
+    ]
+  },
+  {
+    "name": "perl",
+    "category": "Tecnologia",
+    "aliases": [
+      "perl"
+    ]
+  },
+  {
+    "name": "next.js",
+    "category": "Tecnologia",
+    "aliases": [
+      "next.js",
+      "nextjs"
+    ]
+  },
+  {
+    "name": "nuxt",
+    "category": "Tecnologia",
+    "aliases": [
+      "nuxt"
+    ]
+  },
+  {
+    "name": "svelte",
+    "category": "Tecnologia",
+    "aliases": [
+      "svelte"
+    ]
+  },
+  {
+    "name": "sveltekit",
+    "category": "Tecnologia",
+    "aliases": [
+      "sveltekit"
+    ]
+  },
+  {
+    "name": "astro",
+    "category": "Tecnologia",
+    "aliases": [
+      "astro"
+    ]
+  },
+  {
+    "name": "tailwind",
+    "category": "Tecnologia",
+    "aliases": [
+      "tailwind"
+    ]
+  },
+  {
+    "name": "bootstrap",
+    "category": "Tecnologia",
+    "aliases": [
+      "bootstrap"
+    ]
+  },
+  {
+    "name": "sass",
+    "category": "Tecnologia",
+    "aliases": [
+      "sass"
+    ]
+  },
+  {
+    "name": "less",
+    "category": "Tecnologia",
+    "aliases": [
+      "less"
+    ]
+  },
+  {
+    "name": "webpack",
+    "category": "Tecnologia",
+    "aliases": [
+      "webpack"
+    ]
+  },
+  {
+    "name": "vite",
+    "category": "Tecnologia",
+    "aliases": [
+      "vite"
+    ]
+  },
+  {
+    "name": "esbuild",
+    "category": "Tecnologia",
+    "aliases": [
+      "esbuild"
+    ]
+  },
+  {
+    "name": "rollup",
+    "category": "Tecnologia",
+    "aliases": [
+      "rollup"
+    ]
+  },
+  {
+    "name": "jest",
+    "category": "Tecnologia",
+    "aliases": [
+      "jest"
+    ]
+  },
+  {
+    "name": "vitest",
+    "category": "Tecnologia",
+    "aliases": [
+      "vitest"
+    ]
+  },
+  {
+    "name": "cypress",
+    "category": "Tecnologia",
+    "aliases": [
+      "cypress"
+    ]
+  },
+  {
+    "name": "playwright",
+    "category": "Tecnologia",
+    "aliases": [
+      "playwright"
+    ]
+  },
+  {
+    "name": "selenium",
+    "category": "Tecnologia",
+    "aliases": [
+      "selenium"
+    ]
+  },
+  {
+    "name": "puppeteer",
+    "category": "Tecnologia",
+    "aliases": [
+      "puppeteer"
+    ]
+  },
+  {
+    "name": "testing library",
+    "category": "Tecnologia",
+    "aliases": [
+      "testing library"
+    ]
+  },
+  {
+    "name": "storybook",
+    "category": "Tecnologia",
+    "aliases": [
+      "storybook"
+    ]
+  },
+  {
+    "name": "bitbucket",
+    "category": "Tecnologia",
+    "aliases": [
+      "bitbucket"
+    ]
+  },
+  {
+    "name": "gitlab",
+    "category": "Tecnologia",
+    "aliases": [
+      "gitlab"
+    ]
+  },
+  {
+    "name": "github",
+    "category": "Tecnologia",
+    "aliases": [
+      "github"
+    ]
+  },
+  {
+    "name": "jira",
+    "category": "Tecnologia",
+    "aliases": [
+      "jira"
+    ]
+  },
+  {
+    "name": "confluence",
+    "category": "Tecnologia",
+    "aliases": [
+      "confluence"
+    ]
+  },
+  {
+    "name": "slack",
+    "category": "Tecnologia",
+    "aliases": [
+      "slack"
+    ]
+  },
+  {
+    "name": "notion",
+    "category": "Tecnologia",
+    "aliases": [
+      "notion"
+    ]
+  },
+  {
+    "name": "figma",
+    "category": "Tecnologia",
+    "aliases": [
+      "figma"
+    ]
+  },
+  {
+    "name": "adobe xd",
+    "category": "Tecnologia",
+    "aliases": [
+      "adobe xd"
+    ]
+  },
+  {
+    "name": "sketch",
+    "category": "Tecnologia",
+    "aliases": [
+      "sketch"
+    ]
+  },
+  {
+    "name": "zeplin",
+    "category": "Tecnologia",
+    "aliases": [
+      "zeplin"
+    ]
+  },
+  {
+    "name": "postman",
+    "category": "Tecnologia",
+    "aliases": [
+      "postman"
+    ]
+  },
+  {
+    "name": "insomnia",
+    "category": "Tecnologia",
+    "aliases": [
+      "insomnia"
+    ]
+  },
+  {
+    "name": "swagger",
+    "category": "Tecnologia",
+    "aliases": [
+      "swagger"
+    ]
+  },
+  {
+    "name": "openapi",
+    "category": "Tecnologia",
+    "aliases": [
+      "openapi"
+    ]
+  },
+  {
+    "name": "oauth",
+    "category": "Tecnologia",
+    "aliases": [
+      "oauth",
+      "oauth2"
+    ]
+  },
+  {
+    "name": "jwt",
+    "category": "Tecnologia",
+    "aliases": [
+      "jwt"
+    ]
+  },
+  {
+    "name": "oidc",
+    "category": "Tecnologia",
+    "aliases": [
+      "oidc"
+    ]
+  },
+  {
+    "name": "arquitetura",
+    "category": "Tecnologia",
+    "aliases": [
+      "arquitetura"
+    ]
+  },
+  {
+    "name": "design patterns",
+    "category": "Tecnologia",
+    "aliases": [
+      "design patterns"
+    ]
+  },
+  {
+    "name": "clean code",
+    "category": "Tecnologia",
+    "aliases": [
+      "clean code"
+    ]
+  },
+  {
+    "name": "solid",
+    "category": "Tecnologia",
+    "aliases": [
+      "solid"
+    ]
+  },
+  {
+    "name": "tdd",
+    "category": "Tecnologia",
+    "aliases": [
+      "tdd"
+    ]
+  },
+  {
+    "name": "bdd",
+    "category": "Tecnologia",
+    "aliases": [
+      "bdd"
+    ]
+  },
+  {
+    "name": "agile",
+    "category": "Tecnologia",
+    "aliases": [
+      "agile"
+    ]
+  },
+  {
+    "name": "scrum",
+    "category": "Tecnologia",
+    "aliases": [
+      "scrum"
+    ]
+  },
+  {
+    "name": "kanban",
+    "category": "Tecnologia",
+    "aliases": [
+      "kanban"
+    ]
+  },
+  {
+    "name": "xp",
+    "category": "Tecnologia",
+    "aliases": [
+      "xp"
+    ]
+  },
+  {
+    "name": "devops",
+    "category": "Tecnologia",
+    "aliases": [
+      "devops"
+    ]
+  },
+  {
+    "name": "sre",
+    "category": "Tecnologia",
+    "aliases": [
+      "sre"
+    ]
+  },
+  {
+    "name": "observability",
+    "category": "Tecnologia",
+    "aliases": [
+      "observability"
+    ]
+  },
+  {
+    "name": "logging",
+    "category": "Tecnologia",
+    "aliases": [
+      "logging"
+    ]
+  },
+  {
+    "name": "monitoring",
+    "category": "Tecnologia",
+    "aliases": [
+      "monitoring"
+    ]
+  },
+  {
+    "name": "tracing",
+    "category": "Tecnologia",
+    "aliases": [
+      "tracing"
+    ]
+  },
+  {
+    "name": "datadog",
+    "category": "Tecnologia",
+    "aliases": [
+      "datadog"
+    ]
+  },
+  {
+    "name": "new relic",
+    "category": "Tecnologia",
+    "aliases": [
+      "new relic"
+    ]
+  }
+]

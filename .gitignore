@@ -59,3 +59,6 @@ frontend-mobile-preview.png
 frontend-preview-top.png
 frontend/data/jobs.json
 frontend/data/jobs.json.tmp
+
+# Collector cache and operational state
+.cache/

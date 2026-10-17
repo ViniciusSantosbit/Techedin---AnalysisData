@@ -20,7 +20,7 @@ class AnalyticsRepositoryTest {
     @Autowired TestEntityManager em;
     @Autowired FactJobTechnologyRepository repository;
     @Autowired JdbcTemplate jdbc;
-    @Test void aggregatesOnlyVerifiedRealJobsAndMatchesCaseInsensitiveName() {
+    @Test void aggregatesOnlyVerifiedRealJobsAndMatchesCaseInsensitiveName() throws Exception {
         var tech = em.persist(DimTechnology.builder().name("Python").category("Linguagem").build());
         var day = em.persist(DimDate.builder().date(LocalDate.of(2026,10,12)).day(12).month(10).year(2026).build());
         var level = em.persist(DimSeniority.builder().level("Sênior").build());
@@ -35,6 +35,17 @@ class AnalyticsRepositoryTest {
         var payload = new DashboardController(jdbc).dashboard();
         assertEquals("real", payload.get("dataKind"));
         assertEquals(1, ((List<?>) payload.get("jobs")).size());
+        var resumes = org.mockito.Mockito.mock(com.techedin.backend.resume.ResumeService.class);
+        var accounts = org.mockito.Mockito.mock(com.techedin.backend.account.AccountService.class);
+        var user = java.util.UUID.randomUUID();
+        org.mockito.Mockito.when(resumes.get(user)).thenReturn(new com.techedin.backend.resume.ResumeService.ResumeView(
+            java.util.UUID.randomUUID(), "synthetic.pdf", "application/pdf", 100, "Projetos Python", null, null));
+        org.mockito.Mockito.when(accounts.view(user)).thenReturn(new com.techedin.backend.account.AccountService.AccountView(
+            user, "fixture@example.invalid", "Fixture", new com.techedin.backend.account.AccountService.Preferences("", "", "any", "senior")));
+        var recommendations = new com.techedin.backend.recommendation.RecommendationService(resumes,accounts,jdbc,new com.fasterxml.jackson.databind.ObjectMapper()).get(user);
+        assertEquals(1,recommendations.sampleSize());
+        assertEquals(1,recommendations.matches().size());
+        assertEquals(List.of("Python"),recommendations.matches().getFirst().matchedSkills());
     }
     private void addFact(DimTechnology tech, DimDate day, DimSeniority level, boolean demo, boolean verified, int count) {
         var job = em.persist(DimJob.builder().title("Dev").company("Empresa").source("test")

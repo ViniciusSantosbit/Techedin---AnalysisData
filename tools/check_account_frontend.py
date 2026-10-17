@@ -13,7 +13,8 @@ server = http.server.ThreadingHTTPServer(('127.0.0.1', 0),
     functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(root / 'frontend')))
 threading.Thread(target=server.serve_forever, daemon=True).start()
 origin = f'http://localhost:{server.server_port}'
-state = {'account': None, 'offline': False}
+state = {'account': None, 'resume': None, 'offline': False}
+resume_text = 'Pessoa de Exemplo - Desenvolvimento Java e Python. Experiência em sistemas, testes e bancos SQL.'
 errors = []
 requests = []
 screenshots = Path(tempfile.mkdtemp(prefix='techedin-account-'))
@@ -23,26 +24,57 @@ def api(route):
     request = route.request
     path = urlsplit(request.url).path
     headers = {'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Credentials': 'true',
-               'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+               'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
                'Access-Control-Allow-Headers': 'Content-Type,X-CSRF-TOKEN'}
     status, payload = 200, {}
     if request.method == 'OPTIONS':
         route.fulfill(status=204, headers=headers)
         return
     if path == '/api/dashboard':
-        payload = {'dataKind': 'real', 'jobs': [], 'sources': [], 'collectedAt': None}
+        payload = {'dataKind': 'real', 'jobs': [], 'sources': [{'name': 'Remotive', 'status': 'cached', 'jobCount': 0}, *[{'name': f'Fonte {i}', 'status': 'stored', 'jobCount': 0} for i in range(4)]], 'collectedAt': None}
     elif state['offline']:
         status, payload = 503, {'message': 'Conta temporariamente indisponível.'}
     elif path == '/api/auth/csrf':
         payload = {'headerName': 'X-CSRF-TOKEN', 'token': 'fixture-token'}
     elif path == '/api/auth/session':
         payload = {'authenticated': state['account'] is not None, 'account': state['account']}
+    elif path == '/api/account/recommendations':
+        payload = {'state': 'ready' if state['resume'] else 'no_resume', 'skills': ['Java', 'Python'], 'sampleSize': 1,
+            'matches': [{'job': {'url': 'https://jobs.example/1', 'title': 'Backend Java', 'company': 'Exemplo', 'source': 'Teste', 'seniority': 'Júnior'},
+                'matchedSkills': ['Java'], 'otherSkills': ['Docker'], 'reasons': ['Java aparece nos dois textos.']}] if state['resume'] else []}
+    elif path == '/api/account/resume' and request.method == 'GET':
+        payload = {'resume': state['resume']}
+    elif path == '/api/account/resume/evaluation' and request.method == 'GET':
+        payload = {'configured': True}
     elif path == '/api/account':
         status = 200 if state['account'] else 401
         payload = state['account'] or {'message': 'Entre na sua conta.'}
     else:
         assert request.headers.get('x-csrf-token') == 'fixture-token'
-        if path == '/api/auth/register':
+        if path == '/api/account/career-chat':
+            assert 'includeResume' not in request.post_data_json
+            payload = {'resumeRevision': state['resume']['revision'] if state['resume'] else None, 'text': '<script>Exemplo seguro</script> Descreva resultados nos projetos.'}
+        elif path == '/api/account/resume/evaluation':
+            assert request.post_data_json['revision'] == state['resume']['revision']
+            payload = {'revision': state['resume']['revision'], 'score': 7.5,
+                'criteria': [{'name': name, 'score': 1.5, 'feedback': 'Exemplo de melhoria.'} for name in ['Clareza', 'Organização', 'Experiências e projetos', 'Habilidades', 'Formação']],
+                'suggestions': '<script>Não executar HTML</script>'}
+        elif path == '/api/account/resume':
+            if request.method == 'POST':
+                assert request.headers['content-type'].startswith('multipart/form-data; boundary=')
+                assert b'curriculo.pdf' in request.post_data_buffer
+                state['resume'] = {'revision': '00000000-0000-0000-0000-000000000001', 'fileName': 'curriculo.pdf',
+                    'fileType': 'application/pdf', 'fileSize': 512, 'text': resume_text,
+                    'uploadedAt': '2026-10-16T12:00:00Z', 'updatedAt': '2026-10-16T12:00:00Z'}
+            elif request.method == 'PUT':
+                assert request.post_data_json['revision'] == state['resume']['revision']
+                state['resume']['text'] = request.post_data_json['text']
+                state['resume']['revision'] = '00000000-0000-0000-0000-000000000002'
+            elif request.method == 'DELETE':
+                assert request.post_data_json['revision'] == state['resume']['revision']
+                state['resume'], status = None, 204
+            payload = {'resume': state['resume']}
+        elif path == '/api/auth/register':
             body = request.post_data_json
             state['account'] = {'id': 'fixture', 'email': body['email'], 'displayName': body['displayName'],
                 'preferences': {'targetRole': '', 'location': '', 'workModel': 'any', 'seniority': 'any'}}
@@ -71,6 +103,18 @@ try:
             body=json.dumps({'dataKind': 'real', 'jobs': [], 'sources': []})))
         page.route('https://cdn.jsdelivr.net/**', lambda route: route.abort())
         page.goto(origin, wait_until='domcontentloaded')
+        expect(page.locator('#sources-list')).to_contain_text('API com atraso de 24h')
+        expect(page.locator('#sources-list')).to_contain_text('Em cache')
+        expect(page.locator('#sources-list .source-row')).to_have_count(3)
+        page.locator('#sources-toggle').click()
+        expect(page.locator('#sources-list .source-row')).to_have_count(5)
+        expect(page.locator('#sources-toggle')).to_have_attribute('aria-expanded', 'true')
+        page.locator('#sources-toggle').click()
+        expect(page.locator('#sources-list .source-row')).to_have_count(3)
+        expect(page.locator('#sources-toggle')).to_have_attribute('aria-expanded', 'false')
+        expect(page.locator('#recommendations-section')).to_be_hidden()
+        expect(page.locator('#career-chat-open')).to_be_hidden()
+        expect(page.locator('#resume-open')).to_be_hidden()
         page.locator('#account-open').click()
         expect(page.locator('#account-register-tab')).to_be_enabled()
         page.locator('#account-register-tab').click()
@@ -78,7 +122,19 @@ try:
         page.locator('#account-email').fill('exemplo@example.com')
         page.locator('#account-password').fill('Senha somente para teste!')
         page.locator('#account-submit').click()
+        expect(page.locator('#account-open')).to_have_text('Bem-vindo, Pessoa de Exemplo')
+        expect(page.locator('#resume-open')).to_be_visible()
         expect(page.locator('#account-profile')).to_be_visible()
+        page.locator('#account-close').click()
+        page.locator('#career-chat-open').click()
+        page.locator('#career-chat-input').fill('Como melhorar os projetos do currículo?')
+        page.locator('#career-chat-send').click()
+        expect(page.locator('#career-chat-messages')).to_contain_text('Descreva resultados')
+        expect(page.locator('#career-chat-messages script')).to_have_count(0)
+        page.locator('#career-chat-clear').click()
+        expect(page.locator('#career-chat-messages')).to_be_empty()
+        page.locator('#career-chat-close').click()
+        page.locator('#account-open').click()
         expect(page.locator('#account-password')).to_have_value('')
         form = page.locator('#account-preferences-form')
         form.locator('[name=targetRole]').fill('Desenvolvimento Python')
@@ -87,17 +143,56 @@ try:
         form.locator('[name=seniority]').select_option('junior')
         form.locator('button[type=submit]').click()
         expect(page.locator('#account-message')).to_have_text('Preferências salvas.')
-        page.screenshot(path=str(screenshots / 'desktop.png'))
+        expect(page.locator('#account-dialog #resume-file')).to_have_count(0)
         page.locator('#account-close').click()
+        page.locator('#resume-open').click()
+        expect(page.locator('#resume-dialog')).to_be_visible()
+        expect(page.locator('#resume-file')).to_be_enabled()
+        page.locator('#resume-file').set_input_files({'name': 'curriculo.pdf', 'mimeType': 'application/pdf',
+            'buffer': b'%PDF-1.4 browser fixture; parser tests use real documents'})
+        page.locator('#resume-upload').click()
+        expect(page.locator('#resume-text')).to_have_value(resume_text)
+        expect(page.locator('#recommendations-list')).to_contain_text('Backend Java')
+        page.locator('#resume-evaluate').click()
+        expect(page.locator('#resume-evaluation-result')).to_contain_text('7,5 / 10')
+        expect(page.locator('#resume-evaluation-result script')).to_have_count(0)
+        page.locator('#resume-text').fill(resume_text + '\nInglês e comunicação com equipes.')
+        page.locator('#resume-review-form button[type=submit]').click()
+        expect(page.locator('#resume-status')).to_have_text('Texto do currículo atualizado.')
+        page.locator('#resume-heading').scroll_into_view_if_needed()
+        page.screenshot(path=str(screenshots / 'desktop.png'))
+        page.locator('#resume-close').click()
         page.reload(wait_until='domcontentloaded')
         page.locator('#account-open').click()
         expect(form.locator('[name=targetRole]')).to_have_value('Desenvolvimento Python')
+        page.locator('#account-close').click()
+        page.locator('#resume-open').click()
+        expect(page.locator('#resume-text')).to_have_value(resume_text + '\nInglês e comunicação com equipes.')
         page.set_viewport_size({'width': 390, 'height': 844})
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
-        assert page.locator('#account-dialog').bounding_box()['width'] <= 390
+        assert page.locator('#resume-dialog').bounding_box()['width'] <= 390
+        page.locator('#resume-heading').scroll_into_view_if_needed()
         page.screenshot(path=str(screenshots / 'mobile.png'))
+        page.locator('#resume-delete').click()
+        page.locator('#resume-delete-cancel').click()
+        expect(page.locator('#resume-details')).to_be_visible()
+        page.locator('#resume-delete').click()
+        page.locator('#resume-delete-yes').click()
+        expect(page.locator('#resume-details')).to_be_hidden()
+        expect(page.locator('#resume-text')).to_have_value('')
+        page.locator('#resume-close').click()
+        page.locator('#career-chat-open').click()
+        assert page.locator('#career-chat').bounding_box()['width'] <= 390
+        page.screenshot(path=str(screenshots / 'mobile-chat.png'))
+        page.locator('#career-chat-input').press('Escape')
+        expect(page.locator('#career-chat')).to_be_hidden()
+        page.locator('#account-open').click()
         page.locator('#account-logout').click()
         expect(page.locator('#account-auth')).to_be_visible()
+        expect(page.locator('#recommendations-section')).to_be_hidden()
+        expect(page.locator('#career-chat-open')).to_be_hidden()
+        expect(page.locator('#resume-open')).to_be_hidden()
+        expect(page.locator('#account-open')).to_have_text('Minha conta')
         page.locator('#account-email').fill('exemplo@example.com')
         page.locator('#account-password').fill('Senha incorreta')
         page.locator('#account-submit').click()
@@ -110,7 +205,7 @@ try:
         assert not errors, errors
         assert not any(method == 'GET' and status == 401 for method, path, status in requests), requests
         browser.close()
-    print('Interface de conta validada: cadastro, preferências, reabertura, logout, erro e celular.')
+    print('Interface validada: conta, preferências, upload, revisão, reabertura, remoção, logout e celular.')
     print(f'Pré-visualizações: {screenshots}')
 finally:
     server.shutdown()

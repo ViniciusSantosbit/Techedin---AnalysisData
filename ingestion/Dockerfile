@@ -4,7 +4,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && playwright install --with-deps chromium
 COPY technologies.json .
 COPY scrapers scrapers
-RUN useradd --create-home techedin && mkdir -p /home/techedin/.cache && cp -r /root/.cache/ms-playwright /home/techedin/.cache/ && chown -R techedin:techedin /home/techedin/.cache
+RUN useradd --create-home techedin && mkdir -p /home/techedin/.cache /app/.cache/ingestion && cp -r /root/.cache/ms-playwright /home/techedin/.cache/ && chown -R techedin:techedin /home/techedin/.cache /app/.cache
 ENV PLAYWRIGHT_BROWSERS_PATH=/home/techedin/.cache/ms-playwright
 USER techedin
 ENTRYPOINT ["python", "scrapers/job_scraper.py"]

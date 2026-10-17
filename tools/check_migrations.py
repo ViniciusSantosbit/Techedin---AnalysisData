@@ -7,3 +7,7 @@ for source in sorted((root / 'database/migrations').glob('V*.sql')):
     if source.read_bytes() != packaged.read_bytes():
         raise SystemExit(f'Migration divergente: {source.name}')
 print('Migrations sincronizadas.')
+
+if (root / 'ingestion/technologies.json').read_bytes() != (root / 'backend/src/main/resources/technology-catalog.json').read_bytes():
+    raise SystemExit('Catálogo tecnológico do backend divergente da coleta.')
+print('Catálogo de tecnologias sincronizado.')

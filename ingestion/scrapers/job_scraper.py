@@ -1,5 +1,10 @@
 """Coleta real e demonstração explícita, sem mistura de dados."""
 import argparse
+import hashlib
+import time
+import tempfile
+from contextlib import contextmanager
+from html import unescape
 from email.utils import parsedate_to_datetime
 from html.parser import HTMLParser
 import json
@@ -14,6 +19,7 @@ from urllib.parse import urljoin, urlsplit, urlunsplit, parse_qs, parse_qsl, url
 from urllib.request import Request, urlopen
 
 import psycopg2
+from psycopg2.extras import execute_values
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
@@ -109,6 +115,12 @@ def scraper_urls():
     urls = []
     for url in filter(None, (part.strip() for part in raw.split(','))):
         parsed = urlsplit(url)
+        if parsed.hostname in ('www.gupy.io', 'gupy.io') and parsed.path.rstrip('/') == '/empregos':
+            url = 'https://portal.gupy.io/job-search/term=desenvolvedor'
+            parsed = urlsplit(url)
+        if parsed.hostname in ('www.catho.com.br', 'catho.com.br') and not parsed.path.strip('/'):
+            url = 'https://www.catho.com.br/vagas/desenvolvedor/'
+            parsed = urlsplit(url)
         term = parse_qs(parsed.query).get('term', [])
         if parsed.hostname == 'portal.gupy.io' and parsed.path.rstrip('/') == '/job-search' and term:
             # Gupy currently uses path-based search filters, not the old query parameter.
@@ -231,6 +243,169 @@ def first_text(container, selectors):
     return ''
 
 
+def api_sources():
+    sources = []
+    if os.getenv('SCRAPER_REMOTIVE_ENABLED', 'true').lower() == 'true':
+        sources.append(('Remotive', 'https://remotive.com/api/remote-jobs?category=software-dev&limit=100', 21600, parse_remotive_jobs))
+    # Only verified employer boards are enabled; arbitrary caller URLs are never used.
+    if os.getenv('SCRAPER_NUBANK_ENABLED', 'true').lower() == 'true':
+        sources.append(('Nubank · Ashby', 'https://api.ashbyhq.com/posting-api/job-board/nubank', 1800, parse_nubank_jobs))
+    return sources
+
+
+def read_public_jobs(url):
+    request = Request(url, headers={'User-Agent': 'TechedinJobCollector/1.0', 'Accept': 'application/json'})
+    with urlopen(request, timeout=20) as response:
+        if response.status != 200:
+            raise RuntimeError(f'HTTP {response.status}')
+        payload = response.read(8 * 1024 * 1024 + 1)
+    if len(payload) > 8 * 1024 * 1024:
+        raise ValueError('Resposta da fonte excedeu 8 MB.')
+    data = json.loads(payload)
+    if not isinstance(data, dict) or not isinstance(data.get('jobs'), list):
+        raise ValueError('Formato da API de vagas mudou.')
+    if len(data['jobs']) > 10000:
+        raise ValueError('Quantidade de anúncios excedeu o limite da fonte.')
+    return data['jobs']
+
+
+def normalize_public_job(raw, company, source, url, description, published):
+    title = raw.get('title')
+    if not isinstance(title, str) or not title.strip() or not isinstance(description, str) or not description.strip():
+        return None
+    description = FeedText().text(unescape(description))[:100000]
+    technologies = extract_technologies(title + '\n' + description)
+    if not description or not technologies:
+        return None
+    return {'title': title.strip()[:255], 'company': company.strip()[:255], 'description': description,
+            'source': source, 'source_url': url, 'published_date': parse_published_date(published if isinstance(published, str) else ''),
+            'seniority': parse_seniority(title), 'technologies': technologies, 'is_demo': False}
+
+
+def parse_remotive_jobs(url, max_jobs=100):
+    expected = 'https://remotive.com/api/remote-jobs?category=software-dev&limit=100'
+    if url != expected:
+        raise ValueError('URL não autorizada para Remotive.')
+    jobs, seen = [], set()
+    for raw in read_public_jobs(url):
+        if not isinstance(raw, dict):
+            continue
+        link = raw.get('url')
+        if not isinstance(link, str):
+            continue
+        link = canonical_url(url, link)
+        parsed = urlsplit(link or '')
+        if parsed.scheme != 'https' or parsed.hostname != 'remotive.com' or parsed.username or not parsed.path.startswith('/remote-jobs/'):
+            continue
+        company = raw.get('company_name')
+        if not isinstance(company, str) or not company.strip():
+            continue
+        job = normalize_public_job(raw, company, 'Remotive', link, raw.get('description'), raw.get('publication_date'))
+        if job and link not in seen:
+            seen.add(link); jobs.append(job)
+    jobs.sort(key=lambda job: job['published_date'] or date.min, reverse=True)
+    return jobs[:max_jobs]
+
+
+def parse_nubank_jobs(url, max_jobs=100):
+    if url != 'https://api.ashbyhq.com/posting-api/job-board/nubank':
+        raise ValueError('URL não autorizada para Nubank.')
+    jobs, seen = [], set()
+    for raw in read_public_jobs(url):
+        if not isinstance(raw, dict) or raw.get('isListed') is not True:
+            continue
+        link = raw.get('jobUrl')
+        if not isinstance(link, str):
+            continue
+        link = canonical_url(url, link)
+        parsed = urlsplit(link or '')
+        if (parsed.scheme != 'https' or parsed.hostname != 'jobs.ashbyhq.com' or parsed.username
+                or not re.fullmatch(r'/nubank/[a-zA-Z0-9-]+/?', parsed.path)):
+            continue
+        description = raw.get('descriptionPlain') or raw.get('descriptionHtml')
+        job = normalize_public_job(raw, 'Nubank', 'Nubank · Ashby', link, description, raw.get('publishedAt'))
+        if job and link not in seen:
+            seen.add(link); jobs.append(job)
+    jobs.sort(key=lambda job: job['published_date'] or date.min, reverse=True)
+    return jobs[:max_jobs]
+
+
+def cache_directory():
+    return Path(os.getenv('SCRAPER_CACHE_DIR', str(BASE_DIR / '.cache/ingestion'))).resolve()
+
+
+@contextmanager
+def collection_lock():
+    directory = cache_directory(); directory.mkdir(parents=True, exist_ok=True)
+    with (directory / 'collector.lock').open('a+b') as handle:
+        handle.seek(0); handle.write(b'0'); handle.flush(); handle.seek(0)
+        try:
+            if os.name == 'nt':
+                import msvcrt
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as error:
+            raise RuntimeError('Já existe uma coleta em execução nesta instalação.') from error
+        try:
+            yield
+        finally:
+            handle.seek(0)
+            if os.name == 'nt':
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def cached_source(name, url, minimum_seconds, loader, max_jobs):
+    directory = cache_directory(); directory.mkdir(parents=True, exist_ok=True)
+    path = directory / (hashlib.sha256(url.encode()).hexdigest() + '.json')
+    now = time.time(); record = {}
+    try:
+        if path.stat().st_size <= 16 * 1024 * 1024:
+            record = json.loads(path.read_text(encoding='utf-8'))
+        if (record.get('url') != url or record.get('version') != 1
+                or not isinstance(record.get('nextAttempt', 0), (int, float))
+                or not isinstance(record.get('fetchedAt', 0), (int, float))):
+            record = {}
+    except (OSError, ValueError, AttributeError):
+        record = {}
+    cached = record.get('jobs', [])
+    valid = isinstance(cached, list) and all(isinstance(job, dict) and job.get('is_demo') is False for job in cached)
+    if not valid: record = {}; cached = []
+    state = 'cached'
+    error_message = None
+    if now >= record.get('nextAttempt', 0):
+        logger.info('Consultando fonte: %s', name)
+        try:
+            cached = loader(url, 100)
+            record = {'version': 1, 'url': url, 'fetchedAt': now, 'jobs': cached}
+            state = 'ok'
+        except Exception as error:
+            error_message = f'{type(error).__name__}: {str(error)[:240]}'
+            logger.warning('Fonte %s indisponível: %s', name, error_message)
+            record.update(version=1, url=url, jobs=cached, error=error_message)
+        record['nextAttempt'] = now + minimum_seconds
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=directory, delete=False) as temporary:
+            json.dump(record, temporary, ensure_ascii=False, default=str)
+            temporary_path = Path(temporary.name)
+        temporary_path.replace(path)
+    if record.get('error'):
+        state = 'stale' if cached and now - record.get('fetchedAt', 0) < 7 * 86400 else 'unavailable'
+        error_message = record['error']
+        if state == 'unavailable': cached = []
+    jobs = []
+    for item in cached[:max_jobs]:
+        job = dict(item)
+        if isinstance(job.get('published_date'), str): job['published_date'] = parse_published_date(job['published_date'])
+        jobs.append(job)
+    return jobs, {'url': url, 'name': name, 'status': state if jobs else ('unavailable' if error_message else 'empty'),
+                  'jobCount': len(jobs), 'checkedAt': datetime.fromtimestamp(record['fetchedAt'], timezone.utc).isoformat() if record.get('fetchedAt') else None,
+                  'minimumIntervalMinutes': minimum_seconds // 60, 'message': error_message,
+                  'delayHours': 24 if name == 'Remotive' else 0}
+
+
 class PlaywrightScraper:
     def __enter__(self):
         self.playwright = sync_playwright().start()
@@ -339,9 +514,14 @@ class PostgresJobRepository:
             raise ValueError('Dados demo não podem ser gravados no pipeline real.')
         if not jobs:
             return 0
-        conn, count = self._connect(), 0
+        jobs = list({(job['source'], job['source_url']): job for job in jobs}.values())
+        conn = self._connect()
+        facts, dates, levels = [], {}, {}
         try:
             with conn, conn.cursor() as cur:
+                cur.execute("SET LOCAL lock_timeout = '10s'")
+                cur.execute("SET LOCAL statement_timeout = '30s'")
+                cur.execute("SELECT pg_advisory_xact_lock(754328901)")
                 cur.execute('SELECT technology_id, name FROM dim_technology')
                 technology_ids = {name: identifier for identifier, name in cur.fetchall()}
                 for job in jobs:
@@ -357,21 +537,23 @@ class PostgresJobRepository:
                         RETURNING job_id, COALESCE(published_date, first_seen)''',
                         (job['title'], job['company'], job['description'], job['source'], job['source_url'], job.get('published_date')))
                     job_id, fact_date = cur.fetchone()
-                    cur.execute('''INSERT INTO dim_date (date, day, month, year) VALUES (%s,%s,%s,%s)
-                        ON CONFLICT (date) DO UPDATE SET date=EXCLUDED.date RETURNING date_id''',
-                        (fact_date, fact_date.day, fact_date.month, fact_date.year))
-                    date_id = cur.fetchone()[0]
-                    cur.execute('''INSERT INTO dim_seniority (level) VALUES (%s)
-                        ON CONFLICT (level) DO UPDATE SET level=EXCLUDED.level RETURNING seniority_id''',
-                        (job.get('seniority', 'Não informado'),))
-                    seniority_id = cur.fetchone()[0]
+                    if fact_date not in dates:
+                        cur.execute('''INSERT INTO dim_date (date, day, month, year) VALUES (%s,%s,%s,%s)
+                            ON CONFLICT (date) DO UPDATE SET date=EXCLUDED.date RETURNING date_id''',
+                            (fact_date, fact_date.day, fact_date.month, fact_date.year))
+                        dates[fact_date] = cur.fetchone()[0]
+                    level = job.get('seniority', 'Não informado')
+                    if level not in levels:
+                        cur.execute('''INSERT INTO dim_seniority (level) VALUES (%s)
+                            ON CONFLICT (level) DO UPDATE SET level=EXCLUDED.level RETURNING seniority_id''', (level,))
+                        levels[level] = cur.fetchone()[0]
                     cur.execute('DELETE FROM fact_job_technology WHERE job_id=%s', (job_id,))
-                    for technology in job['technologies']:
-                        cur.execute('''INSERT INTO fact_job_technology
-                            (job_id, technology_id, date_id, seniority_id, mention_count) VALUES (%s,%s,%s,%s,1)''',
-                            (job_id, technology_ids[technology], date_id, seniority_id))
-                        count += 1
-            return count
+                    facts.extend((job_id, technology_ids[technology], dates[fact_date], levels[level], 1)
+                                 for technology in sorted(set(job['technologies'])))
+                if facts:
+                    execute_values(cur, '''INSERT INTO fact_job_technology
+                        (job_id, technology_id, date_id, seniority_id, mention_count) VALUES %s''', facts, page_size=1000)
+            return len(facts)
         finally:
             conn.close()
 
@@ -387,56 +569,34 @@ def demo_jobs():
             for i in range(10)]
 
 
-def collect_jobs(max_jobs=30):
+def _collect_jobs(max_jobs=30):
     jobs, sources = [], []
+    for name, url, interval, loader in api_sources():
+        collected, status = cached_source(name, url, interval, loader, max_jobs)
+        jobs.extend(collected); sources.append(status)
     for url in rss_urls():
-        parsed = urlsplit(url)
-        source_name = 'We Work Remotely' if parsed.hostname and parsed.hostname.endswith('weworkremotely.com') else parsed.hostname or url
-        logger.info('Coletando feed RSS: %s', url)
-        try:
-            collected = parse_rss_jobs(url, max_jobs)
-            sources.append({'url': url, 'name': source_name,
-                            'status': 'ok' if collected else 'empty', 'jobCount': len(collected),
-                            'message': None if collected else 'Nenhuma vaga encontrada neste feed.'})
-            jobs.extend(collected)
-        except Exception as exc:
-            sources.append({'url': url, 'name': source_name,
-                            'status': 'unavailable', 'jobCount': 0, 'message': str(exc)})
-            logger.exception('Falha ao ler o feed RSS %s', url)
+        collected, status = cached_source('We Work Remotely', url, 1800, parse_rss_jobs, max_jobs)
+        jobs.extend(collected); sources.append(status)
 
-    urls = scraper_urls()
-    if urls:
-        try:
-            with PlaywrightScraper() as scraper:
-                for url in urls:
-                    logger.info('Coletando fonte: %s', url)
-                    page = None
-                    try:
-                        page = scraper.fetch_page(url)
-                        collected = scraper.extract_jobs_from_page(page, max_jobs)
-                        logger.info('Fonte %s: %s vagas reais extraídas.', urlsplit(url).hostname, len(collected))
-                        sources.append({'url': url, 'name': urlsplit(url).hostname,
-                                        'status': 'ok' if collected else 'empty', 'jobCount': len(collected),
-                                        'message': None if collected else 'Nenhuma vaga encontrada nesta consulta.'})
-                        jobs.extend(collected)
-                    except Exception as exc:
-                        sources.append({'url': url, 'name': urlsplit(url).hostname,
-                                        'status': 'unavailable', 'jobCount': 0, 'message': str(exc)})
-                        logger.exception('Falha ao coletar %s', url)
-                    finally:
-                        if page:
-                            page.close()
-        except Exception as exc:
-            recorded = {source['url'] for source in sources}
-            for url in urls:
-                if url not in recorded:
-                    sources.append({'url': url, 'name': urlsplit(url).hostname,
-                                    'status': 'unavailable', 'jobCount': 0, 'message': str(exc)})
-            logger.exception('Falha no ciclo de vida do coletor de páginas')
+    def page_jobs(url, limit):
+        with PlaywrightScraper() as scraper:
+            page = scraper.fetch_page(url)
+            try:
+                return scraper.extract_jobs_from_page(page, min(limit, max_jobs))
+            finally:
+                page.close()
+    for url in scraper_urls():
+        collected, status = cached_source(urlsplit(url).hostname or 'Portal', url, 900, page_jobs, max_jobs)
+        jobs.extend(collected); sources.append(status)
     if not jobs:
         raise RuntimeError('Nenhuma vaga real coletada. Verifique seletores/bloqueios; demo é explícita.')
-    jobs = list({(j['source'], j['source_url']): j for j in jobs}.values())
+    jobs = list({j['source_url']: j for j in jobs}.values())
     return jobs, sources
+
+
+def collect_jobs(max_jobs=30):
+    with collection_lock():
+        return _collect_jobs(max_jobs)
 
 
 def export_snapshot(jobs, sources, destination):
@@ -455,7 +615,7 @@ def run_scraper(max_jobs=30):
     jobs, sources = collect_jobs(max_jobs)
     count = PostgresJobRepository().upsert_jobs_and_facts(jobs)
     logger.info('%s vagas e %s fatos persistidos.', len(jobs), count)
-    if any(source['status'] != 'ok' for source in sources):
+    if any(source['status'] not in ('ok', 'cached', 'empty') for source in sources):
         logger.warning('Coleta parcial: consulte a disponibilidade das fontes nos logs.')
 
 
@@ -464,7 +624,18 @@ def main():
     parser.add_argument('--demo-json', type=Path, help='Gera 10 vagas fictícias em JSON, sem sites/banco.')
     parser.add_argument('--export-json', type=Path, help='Coleta vagas REAIS e salva um snapshot, sem conexão com banco.')
     parser.add_argument('--max-jobs', type=int, default=30, help='Limite de vagas por fonte (1 a 100).')
+    parser.add_argument('--api-only', action='store_true', help='Consulta somente APIs públicas Remotive/Nubank, sem Chromium ou RSS.')
+    parser.add_argument('--watch', action='store_true', help='Mantém o coletor ativo; interrompa com Ctrl+C.')
+    parser.add_argument('--interval-seconds', type=int, default=1800, help='Intervalo entre ciclos no modo watch, mínimo 900.')
+
     args = parser.parse_args()
+    if not 900 <= args.interval_seconds <= 86400:
+        parser.error('--interval-seconds deve estar entre 900 e 86400')
+    if args.watch and args.demo_json:
+        parser.error('--watch não aceita dados demo')
+    if args.api_only:
+        os.environ['SCRAPER_URLS'] = ''
+        os.environ['SCRAPER_RSS_URLS'] = ''
     if not 1 <= args.max_jobs <= 100:
         parser.error('--max-jobs deve estar entre 1 e 100')
     if args.demo_json and args.export_json:
@@ -472,11 +643,26 @@ def main():
     if args.demo_json:
         args.demo_json.write_text(json.dumps(demo_jobs(), ensure_ascii=False, indent=2, default=str), encoding='utf-8')
         return
-    if args.export_json:
-        jobs, sources = collect_jobs(args.max_jobs)
-        export_snapshot(jobs, sources, args.export_json)
+    def cycle():
+        if args.export_json:
+            jobs, sources = collect_jobs(args.max_jobs)
+            export_snapshot(jobs, sources, args.export_json)
+        else:
+            run_scraper(args.max_jobs)
+    if not args.watch:
+        cycle()
         return
-    run_scraper(args.max_jobs)
+    logger.info('Coletor contínuo ativo. O processo precisa permanecer em execução; Ctrl+C encerra.')
+    try:
+        while True:
+            try:
+                cycle()
+            except Exception as error:
+                logger.error('Ciclo falhou (%s); dados anteriores preservados. Próxima tentativa no intervalo configurado.', type(error).__name__)
+            time.sleep(args.interval_seconds)
+    except KeyboardInterrupt:
+        logger.info('Coletor encerrado pelo operador.')
+
 
 
 if __name__ == '__main__':

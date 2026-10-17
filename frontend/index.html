@@ -8,14 +8,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=20261014-01">
+    <link rel="stylesheet" href="css/styles.css?v=20261016-09">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script>
 </head>
 <body>
     <header class="site-header">
         <a class="brand" href="#" aria-label="Techedin início"><span class="brand-mark">t<span>·</span></span>techedin<span class="brand-tag">market intelligence</span></a>
         <nav aria-label="Navegação principal"><a class="nav-active" href="#overview">Visão geral</a><a href="#jobs-section">Vagas coletadas</a><a href="#sources-section">Fontes</a></nav>
-        <button id="account-open" class="account-button" type="button">Minha conta</button>
+        <div class="header-account-actions"><button id="account-open" class="account-button" type="button">Minha conta</button><button id="resume-open" class="account-button" type="button" hidden>Meu currículo</button></div>
     </header>
 
     <main class="dashboard" id="overview">
@@ -49,9 +49,16 @@
 
         <section class="bottom-grid">
             <article class="panel seniority-panel"><div class="panel-heading"><div><span class="eyebrow">NÍVEIS DE EXPERIÊNCIA</span><h2>Perfil das oportunidades</h2></div></div><div class="seniority-bar" id="seniority-bar" aria-hidden="true"></div><div id="seniority-list" class="seniority-list"><p class="empty-message">Aguardando dados.</p></div><p class="panel-note">Senioridade identificada no título da vaga.</p></article>
-            <article class="panel sources-panel" id="sources-section"><div class="panel-heading"><div><span class="eyebrow">TRANSPARÊNCIA DA COLETA</span><h2>De onde vêm os dados</h2></div><span class="subtle-pill">FONTES PÚBLICAS</span></div><div id="sources-list" class="sources-list"><p class="empty-message">Aguardando coleta.</p></div><p class="panel-note" id="sample-note">Os resultados representam a amostra coletada, com links para conferir cada vaga.</p></article>
+            <article class="panel sources-panel" id="sources-section"><div class="panel-heading"><div><span class="eyebrow">TRANSPARÊNCIA DA COLETA</span><h2>De onde vêm os dados</h2></div><span class="subtle-pill">FONTES PÚBLICAS</span></div><div id="sources-list" class="sources-list"><p class="empty-message">Aguardando coleta.</p></div><button id="sources-toggle" class="sources-toggle text-button" type="button" aria-expanded="false" aria-controls="sources-list" hidden><span id="sources-toggle-label">Mostrar todas as fontes</span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><p class="panel-note" id="sample-note">Os resultados representam a amostra coletada, com links para conferir cada vaga.</p></article>
         </section>
 
+        <section id="recommendations-section" class="panel recommendations-panel" aria-labelledby="recommendations-heading" hidden>
+            <div class="panel-heading"><div><span class="eyebrow">A PARTIR DO SEU CURRÍCULO</span><h2 id="recommendations-heading">Vagas para explorar</h2></div><button id="recommendations-refresh" class="account-button" type="button">Atualizar sugestões</button></div>
+            <p class="panel-note">Correspondências de texto entre seu currículo e as vagas coletadas. Não representam chance de contratação nem confirmação de vaga ativa. Confira o anúncio original.</p>
+            <p id="recommendations-status" class="panel-note" role="status"></p>
+            <p id="recommendations-profile" class="panel-note"></p>
+            <div id="recommendations-list" class="recommendations-list"></div>
+        </section>
         <section class="panel jobs-panel" id="jobs-section">
             <div class="panel-heading"><div><span class="eyebrow">DOS NÚMEROS ÀS OPORTUNIDADES</span><h2>Explore as vagas coletadas</h2></div><span class="subtle-pill" id="jobs-count">—</span></div>
             <div class="jobs-toolbar"><label class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="job-search" type="search" placeholder="Buscar por cargo, empresa ou tecnologia" aria-label="Buscar vagas"></label><button id="clear-filter" class="text-button" type="button" hidden>Limpar filtro</button></div>
@@ -87,8 +94,60 @@
             <button id="account-logout" class="text-button account-logout" type="button">Sair da conta</button>
         </section>
     </dialog>
+    <dialog id="resume-dialog" class="account-dialog" aria-labelledby="resume-heading">
+        <div class="account-dialog-heading"><h2 id="resume-heading">Meu currículo</h2><button id="resume-close" class="text-button" type="button" aria-label="Fechar currículo">Fechar</button></div>
+            <section class="resume-section resume-workspace" aria-labelledby="resume-heading">
+
+                <p class="panel-note">Envie um PDF com texto selecionável ou um DOCX de até 5 MB. Guardamos apenas o texto no seu perfil; o arquivo original não é mantido.</p>
+                <p id="resume-status" class="account-message" role="status" aria-live="polite"></p>
+                <form id="resume-upload-form" class="account-form">
+                    <fieldset id="resume-upload-controls" disabled>
+                        <label for="resume-file">Arquivo do currículo</label>
+                        <input id="resume-file" type="file" name="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required>
+                        <button id="resume-upload" class="account-primary" type="submit">Anexar currículo</button>
+                    </fieldset>
+                </form>
+                <div id="resume-details" hidden>
+                    <section aria-labelledby="resume-evaluation-heading">
+                        <h3 id="resume-evaluation-heading">Avaliação do currículo</h3>
+                        <p class="panel-note">Ao avaliar, o texto salvo será enviado ao Google Gemini. A nota considera a qualidade do texto; revise as sugestões da IA.</p>
+                        <button type="button" id="resume-evaluate">Avaliar currículo com IA</button>
+                        <p id="resume-evaluation-status" role="status"></p>
+                        <div id="resume-evaluation-result" hidden></div>
+                    </section>
+                    <p id="resume-file-info" class="panel-note"></p>
+                    <form id="resume-review-form" class="account-form">
+                        <fieldset id="resume-review-controls">
+                            <label for="resume-text">Revise o texto extraído</label>
+                            <p class="panel-note" id="resume-review-hint">Confira se experiências, formação e habilidades foram lidas corretamente antes de salvar correções.</p>
+                            <textarea id="resume-text" name="text" rows="10" minlength="40" maxlength="100000" aria-describedby="resume-review-hint" required></textarea>
+                            <span id="resume-text-count" class="panel-note"></span>
+                            <button class="account-primary" type="submit">Salvar correções</button>
+                        </fieldset>
+                    </form>
+                    <button id="resume-delete" class="text-button resume-delete" type="button">Remover currículo</button>
+                    <div id="resume-delete-confirm" class="resume-confirm" hidden>
+                        <p>Remover o texto do currículo salvo no seu perfil?</p>
+                        <button id="resume-delete-cancel" class="text-button" type="button">Cancelar</button>
+                        <button id="resume-delete-yes" class="account-button" type="button">Confirmar remoção</button>
+                    </div>
+                </div>
+            </section>
+    </dialog>
+    <button id="career-chat-open" class="career-chat-launcher" type="button" aria-label="Abrir assistente de carreira" aria-controls="career-chat" aria-expanded="false" hidden><svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true"><path d="M13.5 2 4 14h7l-.5 8L20 10h-7z"/></svg></button>
+    <section id="career-chat" class="career-chat" role="region" aria-labelledby="career-chat-title" hidden>
+        <div class="career-chat-heading"><h2 id="career-chat-title">Assistente de carreira</h2><button id="career-chat-close" class="text-button" type="button" aria-label="Fechar assistente">Fechar</button></div>
+        <p class="panel-note">Ajuda com currículo, candidaturas e entrevistas. Mensagens e o currículo salvo na sua conta são enviados ao Google Gemini para personalizar as respostas. Confira as sugestões.</p>
+        <div id="career-chat-messages" class="career-chat-messages" role="log" aria-live="polite"></div>
+        <form id="career-chat-form">
+                <label for="career-chat-input" class="panel-note">Sua pergunta</label>
+            <textarea id="career-chat-input" maxlength="2000" rows="3" required placeholder="Como posso melhorar meus projetos no currículo?"></textarea>
+            <p id="career-chat-status" class="panel-note" role="status"></p>
+            <div class="career-chat-actions"><button id="career-chat-clear" class="text-button" type="button">Limpar conversa</button><button id="career-chat-send" class="account-primary" type="submit">Enviar</button></div>
+        </form>
+    </section>
     <noscript>Ative o JavaScript para consultar os gráficos e as vagas.</noscript>
-    <script type="module" src="js/app.js?v=20261014-03"></script>
-    <script type="module" src="js/account.js?v=20261014-04"></script>
+    <script type="module" src="js/app.js?v=20261016-09"></script>
+    <script type="module" src="js/account.js?v=20261016-07"></script>
 </body>
 </html>

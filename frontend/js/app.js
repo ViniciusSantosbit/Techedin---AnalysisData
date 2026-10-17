@@ -1,8 +1,9 @@
-import { validateSnapshot, summarize, technologySeries, readableDate, searchJobs } from './dashboard.mjs';
+import { validateSnapshot, summarize, technologySeries, readableDate, searchJobs, describeSource } from './dashboard.mjs';
 import { resolveApiBase } from './api-config.mjs?v=20261014-01';
 
 const apiBase = resolveApiBase(window.location, window.TECHEDIN_API_BASE);
 const $ = id => document.getElementById(id);
+let sourcesExpanded = false;
 let snapshot, summary, chart, selectedTechnology = '', jobFilter = '', loading = false, visibleJobs = 8;
 const theme = getComputedStyle(document.documentElement);
 const token = name => theme.getPropertyValue(name).trim();
@@ -136,19 +137,20 @@ function renderSeniorities() {
 
 function renderSources() {
     $('sources-list').replaceChildren();
-    snapshot.sources.forEach(source => {
+    snapshot.sources.slice(0, sourcesExpanded ? undefined : 3).forEach(source => {
         const name = source.name.includes('gupy') ? 'Gupy' : source.name.includes('catho') ? 'Catho' : source.name;
         const row = element('div', 'source-row');
         const meta = element('div', 'source-meta');
-        const blocked = source.status === 'unavailable' || source.status === 'empty';
-        meta.append(element('strong', '', name), element('small', '', blocked
-            ? source.message?.includes('403') ? 'Portal respondeu HTTP 403 nesta coleta' : 'Sem vagas disponíveis nesta coleta'
-            : `${source.jobCount} vagas desta fonte na amostra`));
+        const status = describeSource(source);
+        meta.append(element('strong', '', name), element('small', '', status.description));
         row.append(element('span', 'source-icon', name[0]), meta,
-            element('span', `source-state ${blocked ? 'unavailable' : source.status === 'stored' ? 'stored' : ''}`,
-                blocked ? 'Indisponível' : source.status === 'stored' ? 'No banco' : 'Coletada'));
+            element('span', `source-state ${status.warning ? 'unavailable' : source.status === 'stored' ? 'stored' : ''}`, status.label));
         $('sources-list').append(row);
     });
+    $('sources-toggle').hidden = snapshot.sources.length <= 3;
+    $('sources-toggle').setAttribute('aria-expanded', String(sourcesExpanded));
+    $('sources-toggle-label').textContent = sourcesExpanded ? 'Mostrar menos' : `Mostrar todas as fontes (${snapshot.sources.length})`;
+
 }
 
 function renderJobs() {
@@ -199,8 +201,8 @@ function renderSnapshot(payload, origin) {
     $('data-status').classList.remove('offline');
     const time = snapshot.collectedAt && new Date(snapshot.collectedAt);
     $('last-update').textContent = time && !Number.isNaN(time.getTime())
-        ? `Coletado em ${time.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })}` : 'Dados armazenados no banco';
-    const partial = snapshot.sources.some(source => ['unavailable', 'empty'].includes(source.status));
+        ? `Ciclo verificado em ${time.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })}` : 'Dados armazenados no banco';
+    const partial = snapshot.sources.some(source => ['unavailable', 'stale'].includes(source.status));
     const stale = time && (Date.now() - time.getTime() > 86400000);
     setNotice(partial ? 'Coleta parcial: uma das fontes ficou indisponível. Os números abaixo usam somente as vagas realmente coletadas.'
         : stale ? 'Esta é uma coleta anterior. Execute uma nova coleta para atualizar as oportunidades.' : '');
@@ -248,3 +250,8 @@ $('job-search').addEventListener('input', () => { if (snapshot) { visibleJobs = 
 $('clear-filter').addEventListener('click', () => { jobFilter = ''; $('job-search').value = ''; visibleJobs = 8; renderJobs(); });
 $('more-jobs').addEventListener('click', () => { visibleJobs += 8; renderJobs(); });
 loadRealData();
+
+$('sources-toggle').addEventListener('click', () => {
+    sourcesExpanded = !sourcesExpanded;
+    renderSources();
+});

@@ -1,5 +1,17 @@
 # Estado da implementação
 
+## 16/10/2026 — Upload e revisão de currículo
+
+- Adicionado upload privado de PDF/DOCX na seção **Seu currículo**, dentro de **Meu perfil**. É possível substituir o documento, revisar/salvar o texto e excluir o currículo. O cabeçalho do modal fica acessível durante a rolagem.
+- Somente texto e metadados são retidos. Arquivo original é descartado após a requisição. Esta etapa não envia dados ao Gemini nem atribui nota ao currículo.
+- Limites: 5 MB por arquivo, 20 páginas PDF, 100.000 caracteres, 8 MB DOCX descompactado, 256 entradas ZIP e 15 segundos de extração com um worker sem fila. Arquivos protegidos, sem texto, com formato falso, DTD, entidades externas ou macros não são aceitos.
+- Endpoints privados em `/api/account/resume`, protegidos por sessão e CSRF. SQL sempre usa o usuário da sessão; UUID de revisão impede sobrescrita entre abas. Arquivo inválido preserva o currículo anterior.
+- V5 adiciona somente `app_user_resume`, com FK de exclusão em cascata, RLS e bloqueio de acesso público/Data API. Inspeção somente leitura do Supabase encontrou essa tabela já existente, com colunas esperadas, RLS ativo, sem políticas públicas ou permissões para `anon`/`authenticated`. SQL não foi reaplicado e nenhum currículo real foi lido ou alterado.
+- Perfil Maven `runtime` separa artefatos do editor em `target/runtime`. Corrige interferência observada em `target/classes` que impedia descoberta de testes/inicialização de classes.
+- Validação: 20 testes Java, 9 testes dos utilitários Python e 6 Node passaram. Chromium validou cadastro/preferências mais upload, revisão persistida, remoção e logout em desktop/celular com dados isolados. O teste de migrations em PostgreSQL/Testcontainers ficou ignorado por ausência de Docker; a estrutura/proteção real da V5 foi conferida sem escrita no Supabase.
+- API atualizada iniciada com `-Pruntime` e schema manual validado. Verificação HTTP real com origem `127.0.0.1:5500`: painel e consulta de sessão 200; currículo sem login 401 com CORS correto. Não foram criados usuários ou currículos de teste no Supabase.
+- Próxima etapa: análise do texto com Gemini, avaliação explicável de 0 a 10 e perfil estruturado para recomendações.
+
 ## 14/10/2026 — Contas, preferências e revisão da primeira fonte adicional
 
 Consulta de sessão: a abertura do modal passou a usar `GET /api/auth/session`, que retorna HTTP 200 com `authenticated=false` quando o visitante não está conectado. Isso elimina o 401 esperado da antiga consulta inicial ao perfil. `GET /api/account` permanece privado. Os 6 testes de autenticação e a verificação da interface passaram; a API foi reiniciada e o Chromium confirmou o novo retorno nos dois hosts locais. Não houve alteração de dados do Supabase.
@@ -49,3 +61,39 @@ O JAR foi empacotado com `mvnw -Pintegration verify`. A interface foi verificada
 Nenhuma migration/coleta foi aplicada ao Supabase. Nenhum commit, push, deploy ou agendamento foi realizado.
 
 Antes de produção: rotacionar credenciais expostas, executar a integração PostgreSQL e o Compose, revisar uma amostra maior da coleta real e definir o ambiente de deploy. A disponibilidade da Catho permanece uma limitação externa; seus dados não são substituídos por dados inventados.
+
+## Avaliação Gemini — 16/10/2026
+
+Implementados botão de avaliação, endpoint autenticado com CSRF, cinco critérios somados de 0 a 10, resposta estruturada validada, limites de concorrência/frequência e detecção de revisão alterada. Sem nova migração. Nota somente na tela; desaparece ao editar/reabrir. Chave privada GEMINI_API_KEY ainda não configurada: chamadas reais pendentes. Validados 23 testes Java e interface desktop/móvel com nota simulada. Nenhum currículo real foi enviado nos testes.
+
+## Assistente de carreira e navegação — 16/10/2026
+
+Currículo separado do perfil. Botão visível somente após login; saudação com nome e restauração da sessão no carregamento. Gemini configurado localmente; consulta de metadados confirmou acesso ao modelo.
+
+Adicionado chat flutuante com raio, disponível após login, foco em currículo/candidaturas/entrevistas, histórico temporário e inclusão opcional do currículo. Endpoint privado com CSRF, validação de tamanho/papéis, limitação de frequência/concorrência e saída tratada como texto. Não exige migration. PWA/push e recomendações personalizadas permanecem etapas futuras.
+
+Validação do chat: 26 testes Java passaram; Chromium validou envio simulado, saída como texto, limpeza, Escape, login/logout e dimensões móveis. Não foram enviados currículos reais durante os testes.
+
+### Contexto automático do currículo
+
+A pedido do usuário, o chat passou a usar automaticamente o currículo salvo na conta, sem checkbox ou novo upload. Busca sempre pela identidade autenticada. Mudanças de revisão invalidam o histórico enviado à IA, inclusive quando feitas em outra aba; remoção retira o currículo das próximas consultas. O texto é contexto de cada pergunta, não treinamento permanente do modelo. Aviso de envio ao Gemini atualizado na interface.
+
+## Sequência aprovada: recomendações → fontes/coleta → PWA/push
+
+Primeira entrega: recomendações privadas na página, por tecnologias citadas no currículo e nas vagas reais verificadas, cargo desejado e senioridade escolhida. Motivos e tecnologias restantes exibidos; até 20 resultados na amostra de 2.000. Não utiliza nota do currículo como critério de contratação. Não infere senioridade pela idade/anos, localização ou modelo de trabalho. Currículo alterado/excluído e preferências salvas atualizam a lista. Nenhuma migration ou envio adicional ao Gemini.
+
+Próxima entrega: ampliar fontes e atualizar a coleta. Pesquisa da documentação oficial da Remotive identificou atraso de 24h na API pública e recomendação de no máximo quatro consultas por dia, portanto essa fonte não pode prometer alerta instantâneo. PWA/push depende depois de deduplicação e controle da descoberta de novas vagas.
+
+Validação das recomendações: 30 testes Java passaram. Consulta SQL validada adicionalmente em H2 com currículo sintético, filtrando vagas demo/não verificadas. Interface desktop/móvel validada com API simulada, incluindo atualização após upload e ocultação ao sair. Catálogo e migrations sincronizados. Nenhum currículo real foi consultado nos testes e nenhum dado foi gravado no Supabase.
+
+## Fontes adicionais e coleta — 16/10/2026
+
+Implementadas Remotive (API pública, categoria software-dev, atraso de 24h) e Nubank via Ashby, identificado como canal atual pelo site oficial. APIs limitadas a anúncios públicos com título/descrição/link válido e tecnologias do catálogo. Anúncios Ashby não listados são ignorados; data vem de publishedAt, não updatedAt. Gupy e Catho com URLs antigas passam a usar buscas efetivas.
+
+Cache por fonte: Remotive 6h, Nubank e WWR 30min, páginas Gupy/Catho 15min. Bloqueio de coleta simultânea no mesmo cache, espera após falhas, reaproveitamento de resposta válida por até sete dias com status anterior explícito. Falha total preserva snapshot anterior. Modo --watch implementado; nenhum serviço/agendamento automático foi instalado.
+
+Persistência: advisory lock transacional, timeouts, upsert por identidade existente, deduplicação no ciclo e inserção de fatos em lote com reutilização de dimensões. Schema e dados de conta/currículo não foram alterados. Docker preparado com cache persistente e permissões, mas indisponível para execução nesta máquina.
+
+Validação: 23 testes Python de coleta executados, 21 passaram e 2 PostgreSQL foram ignorados por ausência de TEST_DB_DSN; 7 testes Node passaram. Chromium confirmou conta/currículo/recomendações e indicação de cache/atraso na interface desktop/móvel. APIs reais validadas primeiro sem banco; ciclo completo exportou 40 vagas. Importação e reimportação concluídas no Supabase: 40 vagas e 410 fatos, com Catho respondendo 403. Nenhum currículo foi lido/enviado durante estes testes.
+
+Demais empregadores/portais continuam pendentes de adaptadores próprios, conforme docs/JOB_SOURCES.md. Próxima parte: PWA/push, com HTTPS, consentimento, subscriptions por dispositivo, horário de descoberta e prevenção de alertas retroativos/duplicados.

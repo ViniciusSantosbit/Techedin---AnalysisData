@@ -17,6 +17,7 @@ EXPECTED_COLUMNS = {
     'fact_job_technology': {'job_id', 'technology_id', 'date_id', 'seniority_id', 'mention_count'},
     'app_user': {'user_id', 'email', 'display_name', 'password_hash', 'created_at'},
     'app_user_preferences': {'user_id', 'target_role', 'location', 'work_model', 'seniority', 'updated_at'},
+    'app_user_resume': {'user_id', 'revision', 'file_name', 'file_type', 'file_size', 'extracted_text', 'uploaded_at', 'updated_at'},
 }
 
 
@@ -65,6 +66,8 @@ def validate_schema(connection, manual):
                     versions = {row[0] for row in cursor.fetchall()}
                 if '4' not in versions:
                     raise ValueError('A V4 existe sem registro Flyway. Use --manual-schema se o SQL foi aplicado manualmente.')
+                if 'app_user_resume' in columns and '5' not in versions:
+                    raise ValueError('A V5 existe sem registro Flyway. Use --manual-schema se o SQL foi aplicado manualmente.')
     finally:
         connection.rollback()
 
@@ -94,7 +97,7 @@ def main():
         print('Tabelas/colunas conferidas. Flyway desativado somente nesta execução; SQL manual não será reaplicado.', flush=True)
     print('Iniciando a API em http://localhost:8080. Mantenha este terminal aberto.', flush=True)
     wrapper = ROOT / 'backend' / ('mvnw.cmd' if os.name == 'nt' else 'mvnw')
-    command = ['cmd.exe', '/d', '/c', str(wrapper), 'spring-boot:run'] if os.name == 'nt' else [str(wrapper), 'spring-boot:run']
+    command = ['cmd.exe', '/d', '/c', str(wrapper), '-Pruntime', 'spring-boot:run'] if os.name == 'nt' else [str(wrapper), '-Pruntime', 'spring-boot:run']
     return subprocess.call(command, cwd=ROOT / 'backend', env=environment)
 
 
