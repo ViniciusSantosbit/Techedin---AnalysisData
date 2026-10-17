@@ -6,8 +6,8 @@
   "start_url": "./?source=pwa#overview",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#0c0f14",
+  "background_color": "#1b1a1f",
+  "theme_color": "#1b1a1f",
   "description": "Explore vagas de tecnologia e receba alertas relacionados ao seu currículo.",
   "icons": [
     {

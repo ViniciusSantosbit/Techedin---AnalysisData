@@ -31,13 +31,13 @@ try:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page(viewport={'width': 1440, 'height': 1050}, locale='pt-BR')
         page.on('pageerror', lambda error: errors.append(str(error)))
-        page.route('http://localhost:8080/api/**', api_response)
+        page.route('**/api/**', api_response)
         page.route('**/data/jobs.json', file_response)
         page.goto(f'http://127.0.0.1:{server.server_port}', wait_until='networkidle')
         page.locator('#data-status').filter(has_text='Dados reais · Coleta dos portais').wait_for()
         assert page.locator('.site-header').evaluate("el => getComputedStyle(el).display") == 'flex'
         assert page.locator('.stats-grid').evaluate("el => getComputedStyle(el).display") == 'grid'
-        assert page.locator('.page-heading h1').evaluate("el => getComputedStyle(el).fontSize") == '56px'
+        assert page.locator('.page-heading h1').evaluate("el => getComputedStyle(el).fontSize") == '64px'
         assert int(page.locator('#stat-jobs').inner_text()) == len(snapshot['jobs'])
         assert page.evaluate("Chart.getChart(document.getElementById('trendsChart')).data.datasets.length") == 1
         assert page.locator('#demo-file').count() == 0

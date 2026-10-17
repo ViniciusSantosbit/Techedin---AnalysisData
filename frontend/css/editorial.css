@@ -1,0 +1,234 @@
+/* Techedin dark theme: Space Grotesk, black #1b1a1f and purple #826387.
+   Layout and behavior remain in styles.css. */
+:root {
+    color-scheme: dark;
+    --color-parchment: #1b1a1f;
+    --color-paper: #1b1a1f;
+    --color-linen: #242229;
+    --color-ink-black: #f6f1f7;
+    --color-graphite: #e3dce7;
+    --color-charcoal: #69616e;
+    --color-ash: #bbb2c1;
+    --color-fog: #b4b8b4;
+    --color-mist: #403a46;
+    --color-twilight: #282834;
+    --color-dusk: #1f1f29;
+    --color-signal-blue: #41a1cf;
+    --color-cerulean: #0081c0;
+    --color-brand-black: #1b1a1f;
+    --color-brand-lilac: #826387;
+    --color-lilac-light: #d8c4de;
+    --font-space-grotesk: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-ppmondwest: var(--font-space-grotesk);
+    --font-af: var(--font-space-grotesk);
+    --font-commit-mono: var(--font-space-grotesk);
+    --font-inter: var(--font-af);
+    --text-caption: 13px;
+    --text-body-sm: 15px;
+    --text-body: 16px;
+    --text-subheading: 18px;
+    --text-heading-sm: 27px;
+    --text-heading: 40px;
+    --text-heading-lg: 48px;
+    --text-display: 54px;
+    --leading-caption: 1.3;
+    --leading-body-sm: 1.5;
+    --leading-body: 1.5;
+    --leading-subheading: 1.3;
+    --leading-heading: 1.1;
+    --tracking-caption: -.13px;
+    --tracking-body-sm: -.15px;
+    --tracking-subheading: -.18px;
+    --tracking-heading: -.8px;
+    --tracking-heading-lg: -.96px;
+    --tracking-display: -1.08px;
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --page-max-width: 1200px;
+    --section-gap: clamp(32px, 5vw, 64px);
+    --card-padding: 28px;
+    --element-gap: 12px;
+    --radius-md: 4px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --radius-2xl: 16px;
+    --radius-3xl: 24px;
+    --radius-full: 50px;
+    --radius-nav: 12px;
+    --radius-cards: 12px;
+    --radius-buttons: 8px;
+    --radius-inputs: 4px;
+    --radius-badges: 4px;
+    --radius-large-panels: 16px;
+    --radius-large-surfaces: 24px;
+    --shadow-sm: 0 2px 6px #00000026;
+    --shadow-subtle: 0 1px 1px #00000014, 0 4px 5px #00000014;
+    --shadow-subtle-2: 0 0 0 1px #dee2de;
+    --shadow-subtle-3: 0 2px 2px #0000000f;
+    --shadow-sm-2: 0 1px 8px #0000000d;
+    --surface-parchment-canvas: var(--color-parchment);
+    --surface-paper-card: var(--color-paper);
+    --surface-linen-wash: var(--color-linen);
+    --surface-vivid-blue: var(--color-cerulean);
+    /* Compatibility roles used by the dashboard and Chart.js. */
+    --color-void-black: var(--color-brand-black);
+    --color-white: var(--color-ink-black);
+    --color-bone-white: var(--color-graphite);
+    --color-ash-gray: var(--color-ash);
+    --color-smoke-gray: #bbb0c2;
+    --color-graphite-hairline: var(--color-mist);
+    --color-iron: #8a7c90;
+    --color-iris-violet: #826387;
+    --color-iris-violet-glow: #d6badc;
+    --color-sky-blue: #476e85;
+    --color-pulse-green: #90ceb0;
+    --color-alarm-red: #f4a4ad;
+    --color-crimson: #f4a4ad;
+    --color-amber: #e1bc76;
+    --gradient-iris-violet: linear-gradient(#826387, #826387);
+    --gradient-surface-gradient: linear-gradient(#1b1a1f, #1b1a1f);
+    --surface-void: var(--color-linen);
+    --surface-graphite: var(--color-mist);
+    --surface-surface-lift: var(--color-paper);
+    --surface-backdrop-blur: var(--color-brand-black);
+}
+
+body { isolation: isolate; background: #0b0a0d; color: #f6f1f7; letter-spacing: -.01em; }
+body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(180deg, #1b1a1f36, #1b1a1f66 65%, #1b1a1fb3), url('../assets/techedin-background.jpg') center top / cover no-repeat; }
+button, a { transition: color .18s, background-color .18s, border-color .18s; }
+button, input, select, textarea { font-family: var(--font-af); }
+:is(button, a, input, select, textarea):focus-visible { outline-color: var(--color-iris-violet); }
+
+/* Rectangular navigation with gently rounded corners. */
+.site-header { margin: 24px auto 0; padding: 16px 24px; min-height: 80px; gap: 20px; background: var(--color-brand-black); border: 1px solid #514554; border-radius: var(--radius-nav); box-shadow: none; backdrop-filter: blur(16px); }
+.brand { gap: 10px; }
+.brand-symbol { width: 38px; }
+.brand-logo { width: 245px; }
+.site-header nav { gap: 24px; color: #d4ccd7; font-size: 13px; }
+.site-header nav a { padding: 12px 0; }
+.site-header nav a:hover, .site-header nav .nav-active { color: #fefffc; }
+.nav-active::after { background: var(--color-lilac-light); height: 1px; }
+.site-header .account-button { min-height: 40px; padding: 8px 12px; border-color: #796480; color: #f5eef7; font-size: 13px; }
+.site-header .account-button:hover { background: var(--color-brand-lilac); border-color: #cdb5d4; }
+.header-account-actions { min-width: 0; max-width: 100%; }
+.site-header .account-button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; line-height: 1.4; }
+.site-header :is(a, button):focus-visible { outline-color: var(--color-lilac-light); }
+.dashboard { padding-top: 0; }
+.page-heading { min-height: 430px; margin-bottom: 32px; padding: 72px 0 56px; align-items: center; }
+.page-heading > div:first-child { max-width: 660px; }
+.eyebrow { letter-spacing: .09em; font-size: 11px; line-height: 1.5; }
+.page-heading .eyebrow { color: #d8c4de; }
+.page-heading h1 { font-family: var(--font-ppmondwest); font-size: clamp(40px, 4.5vw, 64px); font-weight: 400; line-height: 1.08; letter-spacing: -.025em; color: #fefffc; font-feature-settings: 'liga' 0; margin: 20px 0 24px; }
+.page-heading h1 span { color: #d8c4de; }
+.page-heading p { color: #ddd5e1; font-size: 16px; line-height: 1.75; max-width: 490px; }
+.page-heading > div:first-child { text-shadow: 0 2px 16px #000000a3; }
+.heading-actions { max-width: 290px; padding: 24px; gap: 16px; border: 1px solid #75627c; border-radius: 16px; background: #1b1a1fdd; backdrop-filter: blur(12px); justify-content: flex-start; }
+.status-pill { border-color: #7d7381; border-radius: 4px; background: transparent; color: #f2eaf4; font-size: 11px; line-height: 1.5; }
+.status-pill.offline { border-color: #b9a481; color: #eadbc1; background: transparent; }
+.refresh-button { color: #f5e9fa; background: transparent; border: 1px solid #c3a1ce; box-shadow: none; width: 100%; border-radius: 8px; }
+.refresh-button:hover { background: #826387; color: #fefffc; box-shadow: none; filter: none; }
+.refresh-button:focus-visible { outline-color: #e3cdea; }
+.update-text { color: #c8bdcd; text-align: left; font-family: var(--font-af); font-size: 11px; line-height: 1.6; }
+.notice { background: #25212be8; border-color: #756578; color: #e6dae9; font-size: 13px; }
+.notice.error { background: #302127; border-color: #a66c76; color: #ffced4; }
+
+/* Dark cards over the supplied artwork. */
+.stat-card, .panel { background: var(--color-parchment); color: var(--color-graphite); border: 1px solid var(--color-mist); box-shadow: var(--shadow-subtle); }
+.stat-card { border-radius: 12px; padding: 24px; }
+.stat-label { font-size: 13px; }
+.stat-card strong { font-family: var(--font-ppmondwest); font-size: 48px; font-weight: 400; letter-spacing: -.02em; }
+.accent-card { background: var(--color-brand-black); border-color: #826387; }
+.accent-card strong, .accent-card .stat-icon { color: #f6eafa; }
+.accent-card .stat-label, .accent-card .stat-caption { color: #e0d1e5; }
+.accent-card strong { font-size: 40px; }
+.panel-heading h2 { font-family: var(--font-ppmondwest); font-size: 27px; font-weight: 400; line-height: 1.2; letter-spacing: -.04em; }
+.panel .eyebrow { color: #b5a7bf; }
+.panel-note { font-size: 13px; line-height: 1.7; }
+.panel-description { line-height: 1.6; }
+.subtle-pill { font-family: var(--font-af); font-size: 10px; letter-spacing: .03em; }
+.insights-grid, .bottom-grid { gap: 24px; margin-bottom: 24px; }
+.rank-track, .seniority-bar { background: #322d38; }
+.rank-fill, .ranking-row:nth-child(n+4) .rank-fill { background: #826387; }
+.ranking-row.active .rank-fill { background: var(--color-brand-lilac); }
+.ranking-row { min-height: 32px; }
+.rank-position, .rank-value, .seniority-item b { font-family: var(--font-af); font-variant-numeric: tabular-nums; }
+.source-icon { background: #2b2430; color: #d6badc; font-weight: 500; border-color: #514359; }
+.source-meta small { line-height: 1.65; }
+.source-state { font-size: 11px; }
+.source-state.unavailable { color: #96651d; }
+.source-state.stored { color: #90ceb0; }
+.sources-toggle { border-top: 1px solid var(--color-mist); padding-top: 16px; }
+select { background: var(--color-linen); color: var(--color-graphite); border-color: #b8b2bb; border-radius: 4px; }
+.search-box { background: var(--color-linen); border: 0; border-bottom: 1px solid #84748c; border-radius: 0; }
+.search-box:focus-within { border-color: var(--color-brand-lilac); box-shadow: 0 1px var(--color-brand-lilac); }
+.job-tag { background: #2b2731; color: #c5b8cc; border-color: #49414f; }
+.job-level { background: #302735; border-color: #594660; color: #d6badc; }
+.job-title { font-size: 17px; }
+.job-open { color: #d6badc; text-decoration: underline; text-underline-offset: 4px; }
+.load-more, .account-button { background: transparent; color: #d6badc; border-color: var(--color-brand-lilac); border-radius: 8px; }
+.load-more:hover, .account-button:hover { background: #302735; border-color: #d6badc; }
+.dashboard-footer { margin-top: 32px; padding: 28px 0 40px; border-color: #76647c; color: #d7ccdb; line-height: 1.7; }
+.dashboard-footer b { color: #fefffc; }
+
+/* Dialogs and private workspaces share the dark and purple palette. */
+.account-dialog { background: var(--color-parchment); color: var(--color-graphite); border: 1px solid var(--color-mist); border-radius: 16px; padding: 28px; box-shadow: 0 20px 80px #0006; }
+.account-dialog::backdrop { background: #1b1a1fbb; backdrop-filter: blur(9px); }
+.account-dialog-heading { background: var(--color-parchment); border-color: var(--color-mist); }
+.account-dialog-heading h2 { font-family: var(--font-ppmondwest); font-size: 27px; font-weight: 400; line-height: 1.2; letter-spacing: -.03em; }
+.account-form input, .account-form select, .resume-section textarea, #career-chat-input { background: var(--color-linen); color: var(--color-graphite); border: 0; border-bottom: 1px solid #7b6d83; border-radius: 0; }
+.account-form input:disabled { background: #29262f; color: #b7aabb; opacity: 1; }
+.account-tabs button { background: transparent; color: #bbb2c1; border-color: #62556a; }
+.account-tabs button[aria-pressed='true'] { color: #ead8ef; border-color: #826387; background: #302735; }
+.account-primary { background: var(--color-brand-lilac); border: 1px solid var(--color-brand-lilac); color: #fefffc; border-radius: 8px; box-shadow: none; }
+.account-primary:hover { background: #705276; }
+.account-message { color: #90ceb0; }
+.account-message.error { color: #f4a4ad; }
+.resume-section input[type='file']::file-selector-button { background: #332b39; color: #826387; border: 1px solid #65526d; border-radius: 4px; }
+#resume-evaluate { background: transparent; color: #d6badc; border-color: #907b98; }
+.resume-confirm { background: #29232f; border-color: #594660; }
+.notification-settings { border-color: var(--color-mist); }
+.recommendation-card { background: #242229; border-color: var(--color-mist); }
+.recommendation-card h3 { font-weight: 500; }
+.career-chat-launcher { background: var(--color-brand-lilac); color: #ead7f1; border-color: #c1a7ca; box-shadow: var(--shadow-sm); }
+.career-chat { background: var(--color-parchment); border-color: #65526d; color: var(--color-graphite); box-shadow: 0 12px 40px #0004; }
+.career-chat-heading h2 { font-family: var(--font-ppmondwest); font-size: 23px; font-weight: 400; }
+.career-chat-message { background: #2b2731; }
+.career-chat-message.user { background: #372b3e; border-color: #826387; }
+
+@media (max-width: 1120px) {
+    .site-header { border-radius: var(--radius-nav); padding: 16px 24px; }
+    .brand-logo { width: 215px; }
+    .page-heading { gap: 28px; }
+}
+@media (max-width: 720px) {
+    :root { --card-padding: 24px; }
+    body::before { background-position: 56% top; }
+    .site-header { margin-top: 16px; padding: 16px; gap: 16px; }
+    .brand-symbol { width: 34px; }
+    .brand-logo { width: min(215px, 56vw); }
+    .site-header nav { gap: 20px; font-size: 12px; }
+    .site-header nav a { padding: 10px 0; }
+    .site-header .account-button { margin-left: 0; }
+    .page-heading { min-height: 0; padding: 56px 0 32px; margin-bottom: 24px; }
+    .page-heading h1 { font-size: 44px; letter-spacing: -.03em; line-height: 1.1; }
+    .page-heading p { font-size: 15px; }
+    .heading-actions { margin-top: 28px; padding: 20px; width: 100%; max-width: none; }
+    .refresh-button { width: auto; }
+    .stat-card { padding: 20px; }
+    .stat-card strong { font-size: 40px; }
+    .accent-card strong { font-size: 32px; }
+    .stat-label { line-height: 1.5; }
+    .panel-heading h2 { font-size: 25px; }
+    .account-dialog { padding: 20px; }
+    .account-dialog-heading { top: -20px; margin: -20px -20px 0; padding: 16px 20px; }
+    .source-state { font-size: 12px; }
+}
+@media (max-width: 380px) {
+    .page-heading h1 { font-size: 38px; }
+    .stat-card { padding: 16px; }
+    .stat-label { font-size: 12px; }
+    .source-row { gap: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { button, a { transition: none; } }

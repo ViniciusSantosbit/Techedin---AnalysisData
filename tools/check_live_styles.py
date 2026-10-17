@@ -16,11 +16,16 @@ with sync_playwright() as p:
         grid: getComputedStyle(document.querySelector('.stats-grid')).display,
         heading: getComputedStyle(document.querySelector('h1')).fontSize,
         background: getComputedStyle(document.body).backgroundColor,
+        headingFont: getComputedStyle(document.querySelector('h1')).fontFamily,
+        navbar: getComputedStyle(document.querySelector('.site-header')).backgroundColor,
+        editorialLoaded: [...document.styleSheets].some(sheet => sheet.href?.includes('/css/editorial.css')),
         rules: [...document.styleSheets].find(sheet => sheet.href?.includes('/css/styles.css')).cssRules.length
     })''')
     print('CSS servido:', assets)
     print('Estilos aplicados:', styles)
-    assert styles['header'] == 'flex' and styles['grid'] == 'grid' and styles['heading'] == '56px'
+    assert styles['header'] == 'flex' and styles['grid'] == 'grid' and styles['heading'] == '64px'
+    assert styles['editorialLoaded'] and 'Space Grotesk' in styles['headingFont']
+    assert styles['navbar'] == 'rgb(27, 26, 31)'
     assert styles['rules'] > 60
     page.wait_for_timeout(800)
     page.screenshot(path=str(root / 'frontend-preview-top.png'))

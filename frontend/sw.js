@@ -1,4 +1,4 @@
-const CACHE = 'techedin-static-v3';
+const CACHE = 'techedin-static-v5';
 const PUBLIC = ['./offline.html', './manifest.webmanifest', './icons/techedin-180.png', './icons/techedin-192.png', './icons/techedin-512.png', './icons/techedin-maskable-512.png'];
 self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(PUBLIC)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', event => { event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('techedin-static-') && key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())); });
