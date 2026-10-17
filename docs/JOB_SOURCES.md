@@ -61,3 +61,21 @@ Docker: `docker compose --profile ingestion run --rm scraper --watch --interval-
 ## Próxima etapa
 
 PWA e push dependem de HTTPS no ambiente público, consentimento do usuário, registro por dispositivo e deduplicação de alertas. O atual `first_seen` tem precisão de dia e não deve ser apresentado como horário exato da publicação. Será necessário registrar descoberta com horário e estabelecer uma linha inicial para não notificar todas as vagas antigas ao ativar push.
+# Novas fontes verificadas em 16/10/2026
+
+| Fonte | Implementação | Limite atual |
+| --- | --- | --- |
+| iFood | Job Board API pública Greenhouse, board confirmado pelo portal oficial | Cache mínimo de 30 min; data `first_published`, sem substituir por atualização |
+| Itaú | Lista pública `/busca-de-vagas` e detalhes JobPosting JSON-LD | Primeira página, até 30 detalhes por ciclo; cache de 1 h |
+| Sicoob | Portal público Sicoob/Empregare, busca TI e descrição do anúncio | Primeira página; datas ausentes ficam ausentes; cache de 1 h |
+| Empregare | Busca tecnologia e detalhes JobPosting JSON-LD | Primeira página; ignora `validThrough` expirado; cache de 1 h |
+| Santander | Leitura do portal público Workday, filtros Brasil e famílias técnicas | Até 60 resultados por ciclo, sem login; cache de 1 h |
+| CAIXA | Pendente: fluxo específico de concursos/editais | Não conta editais antigos como vagas abertas |
+| Infojobs | Pendente: acesso/integração autorizada a validar | Consulta HTTPS falhou na cadeia de certificados; validação TLS mantida |
+| Indeed | Pendente: autorização/canal de parceiro | Sem scraper ativo; termos restringem automação sem autorização |
+
+Links de referência: [iFood](https://carreiras.ifood.com.br/), [Greenhouse API](https://docs.greenhouse.io/job-board.html), [Itaú](https://carreiras.itau.com.br/busca-de-vagas), [Sicoob](https://sicoob.empregare.com/pt-br/vagas-de-TI-?pagina=1), [Empregare](https://www.empregare.com/pt-br/vagas-de-tecnologia), [Santander](https://www.santander.com.br/institucional/trabalhe-conosco/carreiras), [CAIXA](https://www.caixa.gov.br/sobre-a-caixa/trabalhe-na-caixa/Paginas/default.aspx), [Indeed](https://br.indeed.com/legal?hl=pt_BR).
+
+Não há promessa de cobertura completa ou alerta instantâneo. Os conectores selecionam anúncios com tecnologias do catálogo; resultados de páginas limitadas podem omitir vagas. Bancos de talentos e anúncios com elegibilidade específica precisam ser conferidos na origem. Não se envia candidatura automaticamente. Publicação e encerramento podem mudar após a coleta; o banco continua sendo uma amostra histórica.
+
+Controles: `SCRAPER_IFOOD_ENABLED`, `SCRAPER_SANTANDER_ENABLED`, `SCRAPER_EMPLOYER_PAGES_ENABLED` (todos `true` por padrão). O último controla Itaú/Sicoob/Empregare. `--api-only` é o modo histórico sem Chromium/RSS e agora inclui os novos portais HTTP públicos. Falhas preservam a última coleta válida; cache de uma amostra pequena permanece pequeno até o próximo ciclo permitido.

@@ -253,3 +253,10 @@ A interface explica correspondências e tecnologias não encontradas no currícu
 ### Fontes adicionais e coleta periódica
 
 Adicionadas APIs públicas da Remotive e do Nubank (Ashby), com cache/frequência por fonte, preservação de resposta anterior em indisponibilidade e modo `--watch`. A Remotive tem atraso de 24h; os anúncios continuam acessíveis na listagem pública. Veja [fontes, limitações e comandos de operação](docs/JOB_SOURCES.md). Não exige migration.
+
+### PWA e notificações
+
+Adicionados instalação, ícones, service worker com tela offline e alertas privados por dispositivo. Ative pelo perfil após anexar o currículo. V6 cria a tabela privada e horário de descoberta. As chaves VAPID ficam somente no backend. Nenhum serviço foi publicado: o domínio previsto é techedin.vercel.app e a API ainda é local. Consulte [configuração, testes e pendências de publicação](docs/PWA_PUSH.md).
+# Contas e novas fontes
+
+Confirmação de e-mail, recuperação de senha, exclusão de conta e caixa local: consulte [docs/ACCOUNTS_PRODUCTION.md](docs/ACCOUNTS_PRODUCTION.md). Os novos conectores iFood, Itaú, Sicoob, Empregare e Santander estão descritos em [docs/JOB_SOURCES.md](docs/JOB_SOURCES.md), junto às pendências de CAIXA, Infojobs e Indeed. Publicar o frontend na Vercel exige também hospedar a API Java e o coletor.

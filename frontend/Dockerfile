@@ -5,3 +5,6 @@ COPY css /usr/share/nginx/html/css
 COPY js /usr/share/nginx/html/js
 COPY data /usr/share/nginx/html/data
 EXPOSE 80
+
+COPY manifest.webmanifest sw.js offline.html /usr/share/nginx/html/
+COPY icons /usr/share/nginx/html/icons

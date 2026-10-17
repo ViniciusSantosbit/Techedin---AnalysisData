@@ -15,7 +15,8 @@ EXPECTED_COLUMNS = {
     'dim_date': {'date_id', 'date', 'day', 'month', 'year'},
     'dim_seniority': {'seniority_id', 'level'},
     'fact_job_technology': {'job_id', 'technology_id', 'date_id', 'seniority_id', 'mention_count'},
-    'app_user': {'user_id', 'email', 'display_name', 'password_hash', 'created_at'},
+    'app_user': {'user_id', 'email', 'display_name', 'password_hash', 'created_at', 'email_verified_at', 'auth_version'},
+    'app_account_token': {'token_hash', 'user_id', 'purpose', 'created_at', 'expires_at'},
     'app_user_preferences': {'user_id', 'target_role', 'location', 'work_model', 'seniority', 'updated_at'},
     'app_user_resume': {'user_id', 'revision', 'file_name', 'file_type', 'file_size', 'extracted_text', 'uploaded_at', 'updated_at'},
 }

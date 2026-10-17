@@ -402,3 +402,7 @@ select { max-width: 100%; min-height: 42px; padding: 9px 30px 9px 12px; border: 
 .sources-toggle[hidden] { display: none; }
 .sources-toggle svg { transition: transform .2s ease; }
 .sources-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+
+.notification-settings { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--color-charcoal); }
+.notification-settings button { margin-right: 8px; min-height: 44px; }
+#install-help > p { margin-top: 20px; line-height: 1.7; }

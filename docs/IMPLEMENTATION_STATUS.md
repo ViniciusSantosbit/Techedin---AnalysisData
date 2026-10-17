@@ -1,5 +1,19 @@
 # Estado da implementação
 
+## 16/10/2026 — Envio de e-mail opcional
+
+Por solicitação do usuário, SMTP/caixa local estão desativados e cadastro/login não exigem confirmação. `ACCOUNT_MAIL_MODE=disabled`, `ACCOUNT_REQUIRE_VERIFICATION=false`. A interface só oferece recuperação/reenvio quando a API informa envio habilitado. Contas e senhas foram preservadas; nenhuma conta foi artificialmente marcada como verificada. O código de e-mail permanece disponível para reativação futura.
+
+## 16/10/2026 — Ampliação de fontes e contas
+
+- Conectores novos: iFood/Greenhouse, Itaú, Sicoob/Empregare, Empregare e Santander/Workday Brasil. Consulta ao vivo e gravação transacional concluídas: 55 anúncios processados no ciclo, painel com 75 anúncios verificados ao final. Nenhuma conta ou currículo real foi usado na validação.
+- CAIXA, Infojobs e Indeed continuam pendentes, conforme [JOB_SOURCES.md](JOB_SOURCES.md). Não são apresentados como monitoramento ativo. CAIXA requer fluxo para editais; Infojobs teve falha TLS; Indeed exige canal autorizado.
+- V7 aplicada transacionalmente ao Supabase manual e validada: tokens privados com RLS e sem acesso anon/authenticated, colunas de confirmação e versão de sessão. Contas existentes não foram marcadas como confirmadas.
+- Confirmação, reenvio, redefinição e exclusão de conta implementados no backend e frontend. Redefinir senha revoga sessões anteriores; exclusão exige senha e EXCLUIR. [Instruções SMTP/local](ACCOUNTS_PRODUCTION.md).
+- Caixa local ativa em `http://127.0.0.1:8025/`; frontend em `http://localhost:8081/`; API em `http://localhost:8080/`. Os processos devem permanecer abertos. SMTP real não configurado nem usado.
+- Verificação: Java 41 testes aprovados; integração PostgreSQL/Testcontainers pulada por falta de Docker. Python 28 testes, 26 aprovados e 2 de PostgreSQL pulados por falta de TEST_DB_DSN. Node 10 aprovados. Interface com API simulada validou confirmação/reenvio/recuperação, leitura e remoção de fragmentos, exclusão, currículo/chat/notificações e celular; PWA validado com service worker real e ausência de cache privado.
+- Publicação ainda pendente: hospedar API/coletor, configurar proxy HTTPS do frontend para a API e SMTP de produção. Vercel sozinha não hospeda esses processos.
+
 ## 16/10/2026 — Upload e revisão de currículo
 
 - Adicionado upload privado de PDF/DOCX na seção **Seu currículo**, dentro de **Meu perfil**. É possível substituir o documento, revisar/salvar o texto e excluir o currículo. O cabeçalho do modal fica acessível durante a rolagem.
@@ -97,3 +111,13 @@ Persistência: advisory lock transacional, timeouts, upsert por identidade exist
 Validação: 23 testes Python de coleta executados, 21 passaram e 2 PostgreSQL foram ignorados por ausência de TEST_DB_DSN; 7 testes Node passaram. Chromium confirmou conta/currículo/recomendações e indicação de cache/atraso na interface desktop/móvel. APIs reais validadas primeiro sem banco; ciclo completo exportou 40 vagas. Importação e reimportação concluídas no Supabase: 40 vagas e 410 fatos, com Catho respondendo 403. Nenhum currículo foi lido/enviado durante estes testes.
 
 Demais empregadores/portais continuam pendentes de adaptadores próprios, conforme docs/JOB_SOURCES.md. Próxima parte: PWA/push, com HTTPS, consentimento, subscriptions por dispositivo, horário de descoberta e prevenção de alertas retroativos/duplicados.
+
+## PWA e push — 16/10/2026
+
+Implementados manifest, ícones, instruções Android/iOS, service worker, tela offline, preferências por dispositivo e dispatcher de alertas compatíveis. Cache restrito a assets públicos, sem currículo/conta/chat/index. Banner genérico sem dados do currículo, via Web Push vazio com assinatura VAPID por Nimbus JOSE/JWT. Alertas usam novas descobertas, correspondência mínima, cursor inicial, agrupamento, lease, tentativas limitadas e remoção de inscrições expiradas. Sem alegar publicação instantânea ou probabilidade de contratação.
+
+V6 aplicada no schema manual em transação: horário discovered_at e tabela privada app_push_subscription com RLS e sem grants Data API; nenhum currículo/conta foi alterado/excluído. Chaves VAPID geradas uma vez e salvas no arquivo ignorado, não exibidas. WEB_PUSH_ENABLED ativado localmente; API reiniciada. Nenhuma inscrição real foi criada pela validação.
+
+Validação: 35 testes Java passaram, 10 testes Node passaram, Chromium validou worker real/offline/privacidade e interface de ativação/desativação por clique com inscrição simulada. Testcontainers/migration PostgreSQL ignorado por Docker indisponível; V6 real inspecionada pelo utilitário de privacidade.
+
+Usuário informou domínio futuro techedin.vercel.app e confirmou que frontend/API são locais. Nenhum deploy foi feito. Entrega real em Android/iPhone permanece pendente de HTTPS no frontend/API, proxy /api na mesma origem, API/coletor ativos e teste em aparelhos. No iPhone, instalação na Tela de Início e iOS 16.4+. Ver docs/PWA_PUSH.md.

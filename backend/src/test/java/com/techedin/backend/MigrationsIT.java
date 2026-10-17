@@ -24,9 +24,11 @@ class MigrationsIT {
     @Test void freshDatabaseMigratesAndCatalogIsComplete() {
         assertEquals(143, jdbc.queryForObject("SELECT count(*) FROM dim_technology", Integer.class));
         assertEquals(6, jdbc.queryForObject("SELECT count(*) FROM dim_seniority", Integer.class));
-        assertEquals(5, jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Integer.class));
+        assertEquals(7, jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Integer.class));
+        assertTrue(jdbc.queryForObject("SELECT relrowsecurity FROM pg_class WHERE oid = 'app_account_token'::regclass", Boolean.class));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM app_user_resume", Integer.class));
         assertTrue(jdbc.queryForObject("SELECT relrowsecurity FROM pg_class WHERE oid = 'app_user_resume'::regclass", Boolean.class));
+        assertTrue(jdbc.queryForObject("SELECT relrowsecurity FROM pg_class WHERE oid = 'app_push_subscription'::regclass", Boolean.class));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM app_user", Integer.class));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM dim_job", Integer.class));
     }

@@ -1,7 +1,9 @@
+import { registration as pwaRegistration, pushSupport, publicKeyBytes } from './pwa.mjs?v=20261016-11';
 import { resolveApiBase } from './api-config.mjs?v=20261014-01';
 const apiBase = resolveApiBase(window.location, window.TECHEDIN_API_BASE);
 const $ = id => document.getElementById(id);
 let account = null, registering = false, busy = false;
+let notificationsGeneration = 0, notificationConfig = null, nativeSubscription = null, notificationSupported = false, notificationsRegistered = false;
 let recommendationsGeneration = 0;
 let chatResumeRevision = null;
 let chatHistory = [], chatGeneration = 0, chatPending = false;
@@ -38,6 +40,7 @@ async function request(path, method = 'GET', body) {
 function render() {
     if (resumeOwner !== (account?.id || null)) {
         resumeOwner = account?.id || null; resume = null; resumeLoaded = false; renderResume();
+        notificationsGeneration++; notificationConfig = null; nativeSubscription = null; notificationsRegistered = false;
         resetChat(); $('career-chat').hidden = true; $('career-chat-open').setAttribute('aria-expanded', 'false');
     }
     $('account-auth').hidden = !!account;
@@ -46,7 +49,7 @@ function render() {
     $('resume-open').hidden = !account;
     $('career-chat-open').hidden = !account;
     $('recommendations-section').hidden = !account;
-    if (account) loadRecommendations();
+    if (account) { loadRecommendations(); loadNotifications(); }
     else { recommendationsGeneration++; $('recommendations-list').replaceChildren(); $('recommendations-profile').textContent = ''; $('recommendations-status').textContent = ''; }
     $('account-heading').textContent = account ? 'Seu perfil profissional' : 'Sua próxima oportunidade';
     if (!account) return;
@@ -78,7 +81,7 @@ async function action(work) {
     message('Aguarde…');
     try { await work(); }
     catch (error) { message(error.message, true); }
-    finally { busy = false; buttons.forEach(button => button.disabled = false); syncResumeControls(); }
+    finally { busy = false; buttons.forEach(button => button.disabled = false); syncResumeControls(); syncNotificationButtons(); }
 }
 $('account-open').addEventListener('click', () => {
     openResumeAfterLogin = false;
@@ -92,7 +95,9 @@ $('account-open').addEventListener('click', () => {
     });
 });
 $('account-close').addEventListener('click', () => $('account-dialog').close());
-$('account-dialog').addEventListener('close', () => { $('account-password').value = ''; });
+$('account-dialog').addEventListener('close', () => {
+    $('account-password').value = ''; $('account-new-password').value = ''; $('account-delete-form').reset();
+});
 $('account-login-tab').addEventListener('click', () => mode(false));
 $('account-register-tab').addEventListener('click', () => mode(true));
 $('account-auth-form').addEventListener('submit', event => {
@@ -100,7 +105,12 @@ $('account-auth-form').addEventListener('submit', event => {
     action(async () => {
         const body = { email: $('account-email').value.trim(), password: $('account-password').value };
         if (registering) body.displayName = $('account-name').value.trim();
-        account = await request('/api/auth/' + (registering ? 'register' : 'login'), 'POST', body);
+        const result = await request('/api/auth/' + (registering ? 'register' : 'login'), 'POST', body);
+        if (result.verificationRequired) {
+            $('account-password').value = '';
+            mode(false); message(result.message); return;
+        }
+        account = result;
         $('account-auth-form').reset();
         render(); message('Você está conectado. Suas preferências ficam vinculadas à sua conta.');
         if (openResumeAfterLogin) {
@@ -124,10 +134,64 @@ $('account-preferences-form').addEventListener('submit', event => {
     });
 });
 $('account-logout').addEventListener('click', () => action(async () => {
+    try { await stopNotifications(); } catch { /* Browser unsubscribe is attempted even when server cleanup fails. */ }
     await request('/api/auth/logout', 'POST');
     account = null; $('account-preferences-form').reset(); $('account-profile-email').value = '';
     mode(false); render(); message('Você saiu da sua conta.');
 }));
+
+for (const [id, path] of [['account-recovery', 'password'], ['account-resend', 'verification']]) {
+    $(id).addEventListener('click', () => action(async () => {
+        const input = $('account-email');
+        if (!input.reportValidity() || !input.value.trim()) return;
+        const result = await request(`/api/auth/${path}/request`, 'POST', { email: input.value.trim() });
+        message(result.message);
+    }));
+}
+$('account-delete-form').addEventListener('submit', event => {
+    event.preventDefault();
+    action(async () => {
+        await request('/api/account', 'DELETE', Object.fromEntries(new FormData(event.target)));
+        try { await nativeSubscription?.unsubscribe(); } catch { /* Account data is already removed. */ }
+        event.target.reset(); $('account-preferences-form').reset(); $('account-profile-email').value = '';
+        account = null; mode(false); render(); message('Sua conta e os dados vinculados foram excluídos.');
+    });
+});
+let accountLink = null;
+function readAccountLink() {
+    if (!/^#(?:verify-email|reset-password)=/.test(window.location.hash)) return;
+    const linkMatch = window.location.hash.match(/^#(verify-email|reset-password)=([A-Za-z0-9_-]{43})$/);
+    accountLink = linkMatch ? { purpose: linkMatch[1], token: linkMatch[2] } : null;
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    $('account-dialog').showModal();
+    if (accountLink) {
+        const reset = accountLink.purpose === 'reset-password';
+        $('account-link-actions').hidden = false;
+        $('account-new-password-label').hidden = !reset;
+        $('account-new-password').required = reset;
+        $('account-link-submit').textContent = reset ? 'Salvar nova senha' : 'Confirmar e-mail';
+    } else message('Link inválido. Solicite um novo e-mail.', true);
+}
+readAccountLink();
+window.addEventListener('hashchange', readAccountLink);
+$('account-link-form').addEventListener('submit', event => {
+    event.preventDefault();
+    action(async () => {
+        if (!accountLink) return;
+        const reset = accountLink.purpose === 'reset-password';
+        const body = { token: accountLink.token };
+        if (reset) body.password = $('account-new-password').value;
+        const result = await request(`/api/auth/${reset ? 'password/reset' : 'verification/confirm'}`, 'POST', body);
+        accountLink = null; $('account-link-actions').hidden = true; event.target.reset();
+        if (reset) { account = null; render(); }
+        message(result.message);
+    });
+});
+request('/api/auth/options').then(options => {
+    $('account-local-mail').hidden = !options.localMailPreview;
+    $('account-recovery').hidden = !options.emailDeliveryEnabled;
+    $('account-resend').hidden = !options.emailDeliveryEnabled || !options.emailConfirmationRequired;
+}).catch(() => {});
 
 function resumeMessage(text, error = false) {
     $('resume-status').textContent = text;
@@ -378,3 +442,70 @@ async function loadRecommendations() {
     }
 }
 $('recommendations-refresh').addEventListener('click', loadRecommendations);
+
+function syncNotificationButtons() {
+    $('notifications-enable').disabled = busy || !notificationSupported || !notificationConfig?.available || notificationsRegistered;
+    $('notifications-disable').disabled = busy || !nativeSubscription;
+}
+async function loadNotifications() {
+    const generation = ++notificationsGeneration;
+    notificationConfig = null;
+    notificationSupported = !pushSupport();
+    if (!notificationSupported) {
+        $('notifications-status').textContent = pushSupport(); syncNotificationButtons(); return;
+    }
+    syncNotificationButtons();
+    try {
+        const config = await request('/api/account/notifications');
+        const registration = await pwaRegistration;
+        if (generation !== notificationsGeneration) return;
+        const subscription = registration ? await registration.pushManager.getSubscription() : null;
+        if (generation !== notificationsGeneration) return;
+        notificationConfig = config; nativeSubscription = subscription; notificationsRegistered = false;
+        if (nativeSubscription && notificationConfig.available) {
+            const state = await request('/api/account/notifications/status', 'POST', {endpoint:nativeSubscription.endpoint});
+            if (generation !== notificationsGeneration) return;
+            notificationsRegistered = state.subscribed;
+        }
+        $('notifications-status').textContent = !registration ? 'Não foi possível preparar o app. Atualize a página e tente novamente.'
+            : !notificationConfig.available ? 'As notificações ainda não estão habilitadas no servidor.'
+            : Notification.permission === 'denied' ? 'Notificações bloqueadas no navegador. Altere a permissão nas configurações do site para ativar.'
+            : notificationsRegistered ? 'Alertas ativados neste dispositivo. Ao sair da conta, serão desativados aqui.'
+            : 'Ative para receber alertas de novas vagas. Você pode desativar a qualquer momento.';
+    } catch (error) {
+        if (generation === notificationsGeneration) $('notifications-status').textContent = error.message;
+    }
+    if (generation === notificationsGeneration) syncNotificationButtons();
+}
+async function stopNotifications() {
+    const registration = await pwaRegistration;
+    const subscription = await registration?.pushManager?.getSubscription();
+    if (!subscription) return;
+    // Stop provider delivery first, including when the account session has expired.
+    const endpoint = subscription.endpoint;
+    const removed = await subscription.unsubscribe();
+    if (!removed) throw new Error('O navegador não confirmou a desativação. Tente novamente nas permissões do site.');
+    nativeSubscription = null; notificationsRegistered = false;
+    await request('/api/account/notifications', 'DELETE', {endpoint});
+}
+$('notifications-enable').addEventListener('click', () => action(async () => {
+    try {
+        // Permission is requested directly from the click gesture, before network waits (required on iOS).
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') { $('notifications-status').textContent = 'A permissão não foi concedida. Nenhum alerta foi ativado.'; return; }
+        const registration = await pwaRegistration;
+        if (!registration || !notificationConfig?.available) throw new Error('Não foi possível preparar as notificações. Reabra o perfil.');
+        let subscription = await registration.pushManager.getSubscription();
+        if (subscription && !notificationsRegistered) { await subscription.unsubscribe(); subscription = null; }
+        subscription ||= await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:publicKeyBytes(notificationConfig.publicKey)});
+        try { await request('/api/account/notifications', 'POST', {endpoint:subscription.endpoint}); }
+        catch (error) { await subscription.unsubscribe(); throw error; }
+        nativeSubscription = subscription; notificationsRegistered = true;
+        $('notifications-status').textContent = 'Alertas ativados neste dispositivo. Só novas descobertas compatíveis serão notificadas.';
+        message('Notificações ativadas.');
+    } catch (error) { $('notifications-status').textContent = error.message; throw error; }
+}));
+$('notifications-disable').addEventListener('click', () => action(async () => {
+    try { await stopNotifications(); $('notifications-status').textContent = 'Alertas desativados neste dispositivo.'; message('Notificações desativadas.'); }
+    catch (error) { $('notifications-status').textContent = error.message; throw error; }
+}));

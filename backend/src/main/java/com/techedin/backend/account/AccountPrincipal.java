@@ -10,11 +10,16 @@ import java.util.UUID;
 
 public final class AccountPrincipal implements UserDetails, CredentialsContainer {
     private final UUID id;
+    private final long authVersion;
     private final String email;
     private String passwordHash;
     public AccountPrincipal(UUID id, String email, String passwordHash) {
-        this.id = id; this.email = email; this.passwordHash = passwordHash;
+        this(id,email,passwordHash,0);
     }
+    public AccountPrincipal(UUID id,String email,String passwordHash,long authVersion) {
+        this.id = id; this.email = email; this.passwordHash = passwordHash; this.authVersion=authVersion;
+    }
+    public long authVersion() { return authVersion; }
     public UUID id() { return id; }
     @Override public String getUsername() { return email; }
     @Override public String getPassword() { return passwordHash; }

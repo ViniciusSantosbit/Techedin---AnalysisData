@@ -27,13 +27,15 @@ public class AccountController {
         @NotNull @Pattern(regexp="any|remote|hybrid|onsite") String workModel,
         @NotNull @Pattern(regexp="any|internship|junior|mid|senior|specialist") String seniority) {}
     private final AccountService service;
+    private final AccountLifecycle lifecycle;
     private final AuthenticationManager manager;
     private final SecurityContextRepository contexts;
     private final SessionAuthenticationStrategy sessions;
     private final AuthAttemptLimiter limiter;
 
     public AccountController(AccountService service, AuthenticationManager manager,
-            SecurityContextRepository contexts, SessionAuthenticationStrategy sessions, AuthAttemptLimiter limiter) {
+            SecurityContextRepository contexts, SessionAuthenticationStrategy sessions, AuthAttemptLimiter limiter, AccountLifecycle lifecycle) {
+        this.lifecycle=lifecycle;
         this.service = service; this.manager = manager; this.contexts = contexts; this.sessions = sessions; this.limiter = limiter;
     }
     @GetMapping("/auth/csrf") public Map<String, String> csrf(CsrfToken token) {
@@ -43,9 +45,13 @@ public class AccountController {
         return user == null ? new SessionView(false, null) : new SessionView(true, service.view(user.id()));
     }
     @PostMapping("/auth/register") @ResponseStatus(HttpStatus.CREATED)
-    public AccountService.AccountView register(@Valid @RequestBody Registration body,
+    public Object register(@Valid @RequestBody Registration body,
             HttpServletRequest request, HttpServletResponse response) {
         limiter.check(request.getRemoteAddr(), true);
+        if (lifecycle.requiresVerification()) {
+            lifecycle.register(body.email(),body.displayName(),body.password());
+            return Map.of("verificationRequired",true,"message","Enviamos um link para confirmar seu e-mail. Depois, entre na conta.");
+        }
         service.register(body.email(), body.displayName(), body.password());
         return authenticate(body.email(), body.password(), request, response);
     }
@@ -61,6 +67,8 @@ public class AccountController {
             throw new BadCredentialsException("Credenciais inválidas");
         }
         var authentication = manager.authenticate(UsernamePasswordAuthenticationToken.unauthenticated(email, password));
+        if (lifecycle.requiresVerification() && !service.view(((AccountPrincipal)authentication.getPrincipal()).id()).emailVerified())
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.FORBIDDEN,"Confirme seu e-mail antes de entrar. Use Reenviar confirmação se precisar de outro link.");
         sessions.onAuthentication(authentication, request, response);
         var context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);

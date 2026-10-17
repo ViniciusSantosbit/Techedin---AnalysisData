@@ -13,7 +13,7 @@ server = http.server.ThreadingHTTPServer(('127.0.0.1', 0),
     functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(root / 'frontend')))
 threading.Thread(target=server.serve_forever, daemon=True).start()
 origin = f'http://localhost:{server.server_port}'
-state = {'account': None, 'resume': None, 'offline': False}
+state = {'account': None, 'resume': None, 'offline': False, 'push': False}
 resume_text = 'Pessoa de Exemplo - Desenvolvimento Java e Python. Experiência em sistemas, testes e bancos SQL.'
 errors = []
 requests = []
@@ -34,10 +34,14 @@ def api(route):
         payload = {'dataKind': 'real', 'jobs': [], 'sources': [{'name': 'Remotive', 'status': 'cached', 'jobCount': 0}, *[{'name': f'Fonte {i}', 'status': 'stored', 'jobCount': 0} for i in range(4)]], 'collectedAt': None}
     elif state['offline']:
         status, payload = 503, {'message': 'Conta temporariamente indisponível.'}
+    elif path == '/api/auth/options':
+        payload = {'emailConfirmationRequired': True, 'localMailPreview': False, 'emailDeliveryEnabled': True}
     elif path == '/api/auth/csrf':
         payload = {'headerName': 'X-CSRF-TOKEN', 'token': 'fixture-token'}
     elif path == '/api/auth/session':
         payload = {'authenticated': state['account'] is not None, 'account': state['account']}
+    elif path == '/api/account/notifications' and request.method == 'GET':
+        payload = {'available': True, 'publicKey': 'B' + 'A' * 86}
     elif path == '/api/account/recommendations':
         payload = {'state': 'ready' if state['resume'] else 'no_resume', 'skills': ['Java', 'Python'], 'sampleSize': 1,
             'matches': [{'job': {'url': 'https://jobs.example/1', 'title': 'Backend Java', 'company': 'Exemplo', 'source': 'Teste', 'seniority': 'Júnior'},
@@ -46,12 +50,18 @@ def api(route):
         payload = {'resume': state['resume']}
     elif path == '/api/account/resume/evaluation' and request.method == 'GET':
         payload = {'configured': True}
-    elif path == '/api/account':
+    elif path == '/api/account' and request.method == 'GET':
         status = 200 if state['account'] else 401
         payload = state['account'] or {'message': 'Entre na sua conta.'}
     else:
         assert request.headers.get('x-csrf-token') == 'fixture-token'
-        if path == '/api/account/career-chat':
+        if path == '/api/account/notifications/status':
+            payload = {'subscribed': state['push']}
+        elif path == '/api/account/notifications':
+            assert request.post_data_json['endpoint'] == 'https://fcm.googleapis.com/fcm/send/fixture'
+            state['push'] = request.method == 'POST'
+            status = 204 if request.method == 'DELETE' else 200
+        elif path == '/api/account/career-chat':
             assert 'includeResume' not in request.post_data_json
             payload = {'resumeRevision': state['resume']['revision'] if state['resume'] else None, 'text': '<script>Exemplo seguro</script> Descreva resultados nos projetos.'}
         elif path == '/api/account/resume/evaluation':
@@ -79,6 +89,17 @@ def api(route):
             state['account'] = {'id': 'fixture', 'email': body['email'], 'displayName': body['displayName'],
                 'preferences': {'targetRole': '', 'location': '', 'workModel': 'any', 'seniority': 'any'}}
             status, payload = 201, state['account']
+            if state.get('verification_required'):
+                state['account'] = None
+                payload = {'verificationRequired': True, 'message': 'Confirme seu e-mail para entrar.'}
+        elif path in ['/api/auth/password/request', '/api/auth/verification/request']:
+            payload = {'message': 'Se houver uma conta elegível, enviaremos um link.'}
+        elif path in ['/api/auth/password/reset', '/api/auth/verification/confirm']:
+            assert request.post_data_json['token'] == 'A' * 43
+            payload = {'message': 'Senha alterada.' if path.endswith('/reset') else 'E-mail confirmado.'}
+        elif path == '/api/account' and request.method == 'DELETE':
+            assert request.post_data_json['confirmation'] == 'EXCLUIR'
+            state['account'], state['resume'], state['push'], status = None, None, False, 204
         elif path == '/api/account/preferences':
             body = request.post_data_json
             state['account']['displayName'] = body.pop('displayName')
@@ -96,7 +117,20 @@ def api(route):
 try:
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
-        page = browser.new_page(viewport={'width': 1440, 'height': 1000}, locale='pt-BR')
+        browser_context = browser.new_context(viewport={'width': 1440, 'height': 1000}, locale='pt-BR')
+        browser_context.add_init_script("""
+            window.__permissionRequests = 0;
+            const notice = class { static permission = 'default'; static async requestPermission() { window.__permissionRequests++; this.permission = 'granted'; return 'granted'; } };
+            Object.defineProperty(window, 'Notification', {value: notice});
+            Object.defineProperty(window, 'PushManager', {value: class {}});
+            let active = null;
+            const registration = {pushManager: {
+                getSubscription: async () => active,
+                subscribe: async options => { if (options.applicationServerKey.length !== 65) throw Error('Invalid key'); active = {endpoint:'https://fcm.googleapis.com/fcm/send/fixture',unsubscribe:async () => { active = null; return true; }}; return active; }
+            }};
+            Object.defineProperty(navigator, 'serviceWorker', {value: {register:async () => registration}});
+        """)
+        page = browser_context.new_page()
         page.on('pageerror', lambda error: errors.append(str(error)))
         page.route('http://localhost:8080/api/**', api)
         page.route('**/data/jobs.json', lambda route: route.fulfill(content_type='application/json',
@@ -152,6 +186,19 @@ try:
             'buffer': b'%PDF-1.4 browser fixture; parser tests use real documents'})
         page.locator('#resume-upload').click()
         expect(page.locator('#resume-text')).to_have_value(resume_text)
+        page.locator('#resume-close').click()
+        page.locator('#account-open').click()
+        expect(page.locator('#notifications-enable')).to_be_enabled()
+        assert page.evaluate('window.__permissionRequests') == 0
+        page.locator('#notifications-enable').click()
+        expect(page.locator('#notifications-status')).to_contain_text('Alertas ativados')
+        assert state['push'] is True
+        page.locator('#notifications-disable').click()
+        expect(page.locator('#notifications-status')).to_have_text('Alertas desativados neste dispositivo.')
+        assert state['push'] is False
+        page.locator('#account-close').click()
+        page.locator('#resume-open').click()
+        expect(page.locator('#resume-dialog')).to_be_visible()
         expect(page.locator('#recommendations-list')).to_contain_text('Backend Java')
         page.locator('#resume-evaluate').click()
         expect(page.locator('#resume-evaluation-result')).to_contain_text('7,5 / 10')
@@ -198,6 +245,40 @@ try:
         page.locator('#account-submit').click()
         expect(page.locator('#account-message')).to_have_text('E-mail ou senha inválidos.')
         assert page.evaluate('localStorage.length') == 0
+        page.locator('#account-recovery').click()
+        expect(page.locator('#account-message')).to_contain_text('Se houver uma conta')
+        page.locator('#account-resend').click()
+        expect(page.locator('#account-message')).to_contain_text('Se houver uma conta')
+        state['verification_required'] = True
+        page.locator('#account-register-tab').click()
+        page.locator('#account-name').fill('Conta com confirmação')
+        page.locator('#account-password').fill('Senha sintética longa 123!')
+        page.locator('#account-submit').click()
+        expect(page.locator('#account-message')).to_have_text('Confirme seu e-mail para entrar.')
+        expect(page.locator('#resume-open')).to_be_hidden()
+        expect(page.locator('#account-password')).to_have_value('')
+        for purpose in ['verify-email', 'reset-password']:
+            page.goto(origin + '/#' + purpose + '=' + 'A' * 43, wait_until='domcontentloaded')
+            expect(page.locator('#account-link-actions')).to_be_visible()
+            assert '#' not in page.url
+            if purpose == 'reset-password': page.locator('#account-new-password').fill('Outra senha longa 123!')
+            page.locator('#account-link-submit').click()
+            expect(page.locator('#account-message')).to_have_text('Senha alterada.' if purpose == 'reset-password' else 'E-mail confirmado.')
+            expect(page.locator('#account-link-actions')).to_be_hidden()
+        state['verification_required'] = False
+        page.locator('#account-register-tab').click()
+        page.locator('#account-name').fill('Conta para excluir')
+        page.locator('#account-email').fill('excluir@example.invalid')
+        page.locator('#account-password').fill('Senha sintética longa 123!')
+        page.locator('#account-submit').click()
+        expect(page.locator('#account-profile')).to_be_visible()
+        page.locator('#account-profile details summary').click()
+        delete_form = page.locator('#account-delete-form')
+        delete_form.locator('[name=password]').fill('Senha sintética longa 123!')
+        delete_form.locator('[name=confirmation]').fill('EXCLUIR')
+        delete_form.locator('button').click()
+        expect(page.locator('#account-message')).to_contain_text('foram excluídos')
+        expect(page.locator('#resume-open')).to_be_hidden()
         page.locator('#account-close').click()
         state['offline'] = True
         page.locator('#account-open').click()

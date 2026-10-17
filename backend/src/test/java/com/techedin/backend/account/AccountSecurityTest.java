@@ -21,7 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
     "spring.datasource.url=jdbc:h2:mem:accounts;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
     "spring.datasource.driver-class-name=org.h2.Driver", "spring.datasource.username=sa", "spring.datasource.password=",
-    "spring.flyway.enabled=false", "spring.jpa.hibernate.ddl-auto=none", "spring.sql.init.mode=always",
+    "ACCOUNT_REQUIRE_VERIFICATION=false", "spring.flyway.enabled=false", "spring.jpa.hibernate.ddl-auto=none", "spring.sql.init.mode=always",
     "spring.sql.init.schema-locations=classpath:db/migration/V4__accounts_and_preferences.sql"})
 @AutoConfigureMockMvc
 class AccountSecurityTest {
@@ -32,6 +32,9 @@ class AccountSecurityTest {
     @MockitoBean TechnologyService technologies;
     private static final String PASSWORD = "Uma senha longa 123!";
 
+    @org.junit.jupiter.api.BeforeAll static void schema(@Autowired JdbcTemplate jdbc) throws Exception {
+        jdbc.execute(new org.springframework.core.io.ClassPathResource("db/migration/V7__account_verification_and_recovery.sql").getContentAsString(java.nio.charset.StandardCharsets.UTF_8).split("-- PostgreSQL security:")[0]);
+    }
     @BeforeEach void clear() { jdbc.update("DELETE FROM app_user"); }
     String csrf(MockHttpSession session) throws Exception {
         var result = mvc.perform(get("/api/auth/csrf").session(session)).andExpect(status().isOk()).andReturn();

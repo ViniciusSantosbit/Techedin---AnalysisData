@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.Map;
 
-@RestControllerAdvice(assignableTypes = AccountController.class)
+@RestControllerAdvice(assignableTypes = {AccountController.class, AccountLifecycleController.class})
 public class AccountErrors {
     @ExceptionHandler(AuthenticationException.class)
     ResponseEntity<?> authentication(AuthenticationException exception) {

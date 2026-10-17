@@ -29,8 +29,11 @@ public class SecurityConfig {
             new ChangeSessionIdAuthenticationStrategy(), new CsrfAuthenticationStrategy(repository)));
     }
     @Bean SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository context,
-            CsrfTokenRepository csrf) throws Exception {
-        http.cors(cors -> {})
+            CsrfTokenRepository csrf, com.techedin.backend.account.AccountService accounts,
+            @org.springframework.beans.factory.annotation.Value("${ACCOUNT_REQUIRE_VERIFICATION:false}") boolean required) throws Exception {
+        http.addFilterBefore(new com.techedin.backend.account.AccountSessionGuard(accounts,required),
+                org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class)
+            .cors(cors -> {})
             .csrf(config -> config.csrfTokenRepository(csrf).ignoringRequestMatchers("/api/admin/scraper/**"))
             .securityContext(config -> config.securityContextRepository(context))
             .sessionManagement(config -> config.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))

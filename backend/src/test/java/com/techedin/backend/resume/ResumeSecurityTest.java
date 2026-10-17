@@ -22,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = {
     "spring.datasource.url=jdbc:h2:mem:resumes;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
     "spring.datasource.driver-class-name=org.h2.Driver", "spring.datasource.username=sa", "spring.datasource.password=",
-    "spring.flyway.enabled=false", "spring.jpa.hibernate.ddl-auto=none", "spring.sql.init.mode=always",
+    "ACCOUNT_REQUIRE_VERIFICATION=false", "spring.flyway.enabled=false", "spring.jpa.hibernate.ddl-auto=none", "spring.sql.init.mode=always",
     "spring.sql.init.schema-locations=classpath:db/migration/V4__accounts_and_preferences.sql"})
 @AutoConfigureMockMvc
 class ResumeSecurityTest {
@@ -34,6 +34,7 @@ class ResumeSecurityTest {
         // Run the actual portable DDL; RLS/grants are verified by the PostgreSQL migration test.
         String sql = new ClassPathResource("db/migration/V5__private_resume_text.sql").getContentAsString(StandardCharsets.UTF_8);
         jdbc.execute(sql.split("-- PostgreSQL security:")[0]);
+        jdbc.execute(new ClassPathResource("db/migration/V7__account_verification_and_recovery.sql").getContentAsString(StandardCharsets.UTF_8).split("-- PostgreSQL security:")[0]);
     }
     @BeforeEach void users() {
         jdbc.update("DELETE FROM app_user");

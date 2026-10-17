@@ -46,6 +46,10 @@ class AnalyticsRepositoryTest {
         assertEquals(1,recommendations.sampleSize());
         assertEquals(1,recommendations.matches().size());
         assertEquals(List.of("Python"),recommendations.matches().getFirst().matchedSkills());
+        jdbc.execute("ALTER TABLE dim_job ADD COLUMN discovered_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
+        var engine=new com.techedin.backend.recommendation.RecommendationService(resumes,accounts,jdbc,new com.fasterxml.jackson.databind.ObjectMapper());
+        assertEquals(1,engine.matchesBetween(user,0,999,java.time.OffsetDateTime.now().minusDays(1)).size());
+        assertEquals(0,engine.matchesBetween(user,0,999,java.time.OffsetDateTime.now().plusDays(1)).size());
     }
     private void addFact(DimTechnology tech, DimDate day, DimSeniority level, boolean demo, boolean verified, int count) {
         var job = em.persist(DimJob.builder().title("Dev").company("Empresa").source("test")

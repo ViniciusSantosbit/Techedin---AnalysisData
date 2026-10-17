@@ -39,18 +39,25 @@ public class RecommendationService {
         return new Result(skills.isEmpty() ? "no_skills" : "ready", resume.revision(), skills,
             preferences.targetRole(), preferences.seniority(), jobs.size(), matches);
     }
-    List<Job> jobs() {
+    public List<Match> matchesBetween(UUID user, long after, long through, java.time.OffsetDateTime since) {
+        var resume = resumes.get(user);
+        if (resume == null) return List.of();
+        return rank(extract(resume.text()), accounts.view(user).preferences(), jobs(
+            "AND job_id > ? AND job_id <= ? AND discovered_at >= ?", new Object[]{after,through,since}));
+    }
+    List<Job> jobs() { return jobs("", new Object[0]); }
+    private List<Job> jobs(String bounds, Object[] arguments) {
         Map<Long, Job> jobs = new LinkedHashMap<>();
         jdbc.query("""
             SELECT j.job_id, j.title, j.company, j.source, j.source_url, j.published_date, j.first_seen,
                    s.level, t.name AS technology
             FROM (SELECT * FROM dim_job WHERE is_verified = true AND is_demo = false AND source_url IS NOT NULL
-                  ORDER BY first_seen DESC, job_id DESC LIMIT 2000) j
+                  %s ORDER BY first_seen DESC, job_id DESC LIMIT 2000) j
             LEFT JOIN fact_job_technology f ON f.job_id=j.job_id
             LEFT JOIN dim_technology t ON t.technology_id=f.technology_id
             LEFT JOIN dim_seniority s ON s.seniority_id=f.seniority_id
             ORDER BY j.first_seen DESC, j.job_id DESC, t.name
-            """, (org.springframework.jdbc.core.RowCallbackHandler) rs -> {
+            """.formatted(bounds), (org.springframework.jdbc.core.RowCallbackHandler) rs -> {
             long id = rs.getLong("job_id");
             Job job = jobs.get(id);
             if (job == null) {
@@ -62,7 +69,7 @@ public class RecommendationService {
             }
             String skill = rs.getString("technology");
             if (skill != null && !job.technologies().contains(skill)) job.technologies().add(skill);
-        });
+        }, arguments);
         return new ArrayList<>(jobs.values());
     }
     public List<String> extract(String text) {

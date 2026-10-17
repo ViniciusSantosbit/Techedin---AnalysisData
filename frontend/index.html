@@ -4,18 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#000000">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icons/icon-180.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Techedin">
     <title>Techedin · Radar do mercado de tecnologia</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=20261016-09">
+    <link rel="stylesheet" href="css/styles.css?v=20261016-10">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script>
 </head>
 <body>
     <header class="site-header">
         <a class="brand" href="#" aria-label="Techedin início"><span class="brand-mark">t<span>·</span></span>techedin<span class="brand-tag">market intelligence</span></a>
         <nav aria-label="Navegação principal"><a class="nav-active" href="#overview">Visão geral</a><a href="#jobs-section">Vagas coletadas</a><a href="#sources-section">Fontes</a></nav>
-        <div class="header-account-actions"><button id="account-open" class="account-button" type="button">Minha conta</button><button id="resume-open" class="account-button" type="button" hidden>Meu currículo</button></div>
+        <div class="header-account-actions"><button id="install-app" class="account-button" type="button">Instalar app</button><button id="account-open" class="account-button" type="button">Minha conta</button><button id="resume-open" class="account-button" type="button" hidden>Meu currículo</button></div>
     </header>
 
     <main class="dashboard" id="overview">
@@ -70,6 +74,12 @@
     <dialog id="account-dialog" class="account-dialog" aria-labelledby="account-heading">
         <div class="account-dialog-heading"><h2 id="account-heading">Sua próxima oportunidade</h2><button id="account-close" class="text-button" type="button" aria-label="Fechar conta">Fechar</button></div>
         <p id="account-message" class="account-message" role="status" aria-live="polite"></p>
+        <section id="account-link-actions" hidden>
+            <form id="account-link-form" class="account-form">
+                <label id="account-new-password-label" hidden>Nova senha<input id="account-new-password" type="password" autocomplete="new-password" minlength="12" maxlength="64"></label>
+                <button id="account-link-submit" class="account-primary" type="submit">Confirmar e-mail</button>
+            </form>
+        </section>
         <section id="account-auth">
             <div class="account-tabs"><button id="account-login-tab" type="button" aria-pressed="true">Entrar</button><button id="account-register-tab" type="button" aria-pressed="false">Criar conta</button></div>
             <form id="account-auth-form" class="account-form">
@@ -79,6 +89,9 @@
                 <p id="account-password-hint" class="panel-note" hidden>Use de 12 a 64 caracteres. Senhas com acentos ou emojis podem ter um limite menor.</p>
                 <button id="account-submit" class="account-primary" type="submit">Entrar</button>
             </form>
+            <button id="account-recovery" class="text-button" type="button" hidden>Esqueci minha senha</button>
+            <button id="account-resend" class="text-button" type="button" hidden>Reenviar confirmação</button>
+            <p id="account-local-mail" class="panel-note" hidden>Ambiente de teste: consulte a caixa local em http://127.0.0.1:8025.</p>
         </section>
         <section id="account-profile" hidden>
             <p class="panel-note">Salve seus objetivos para preparar as próximas recomendações de vagas.</p>
@@ -91,7 +104,22 @@
                 <label>Senioridade desejada<select name="seniority"><option value="any">Sem preferência</option><option value="internship">Estágio</option><option value="junior">Júnior</option><option value="mid">Pleno</option><option value="senior">Sênior</option><option value="specialist">Especialista</option></select></label>
                 <button class="account-primary" type="submit">Salvar preferências</button>
             </form>
+            <section class="notification-settings" aria-labelledby="notifications-heading">
+                <h3 id="notifications-heading">Alertas neste dispositivo</h3>
+                <p class="panel-note">Receba avisos de novas vagas com maior correspondência ao currículo salvo. Os alertas consideram tecnologias, cargo e senioridade; confira a região e demais requisitos no anúncio. Vagas antigas não geram alertas ao ativar. A frequência depende da coleta de cada fonte.</p>
+                <p id="notifications-status" class="panel-note" role="status"></p>
+                <button id="notifications-enable" class="account-primary" type="button" disabled>Ativar notificações</button>
+                <button id="notifications-disable" class="text-button" type="button" disabled>Desativar neste dispositivo</button>
+            </section>
             <button id="account-logout" class="text-button account-logout" type="button">Sair da conta</button>
+            <details><summary>Excluir minha conta</summary>
+                <p class="panel-note">A exclusão é permanente. Remove seu perfil, currículo e inscrições de notificações.</p>
+                <form id="account-delete-form" class="account-form">
+                    <label>Senha atual<input name="password" type="password" autocomplete="current-password" maxlength="64" required></label>
+                    <label>Digite EXCLUIR<input name="confirmation" autocomplete="off" pattern="EXCLUIR" required></label>
+                    <button class="account-primary" type="submit">Excluir conta permanentemente</button>
+                </form>
+            </details>
         </section>
     </dialog>
     <dialog id="resume-dialog" class="account-dialog" aria-labelledby="resume-heading">
@@ -146,8 +174,14 @@
             <div class="career-chat-actions"><button id="career-chat-clear" class="text-button" type="button">Limpar conversa</button><button id="career-chat-send" class="account-primary" type="submit">Enviar</button></div>
         </form>
     </section>
+    <dialog id="install-help" class="account-dialog" aria-labelledby="install-help-heading">
+        <div class="account-dialog-heading"><h2 id="install-help-heading">Instalar Techedin</h2><button id="install-help-close" class="text-button" type="button">Fechar</button></div>
+        <p>No Android, abra o menu do navegador e escolha “Instalar app” ou “Adicionar à tela inicial”.</p>
+        <p>No iPhone/iPad, abra o menu de compartilhamento, escolha “Adicionar à Tela de Início” e abra o Techedin pelo novo ícone.</p>
+        <p class="panel-note">As notificações são opcionais e podem ser ativadas em seu perfil. Para usar no celular, o site e a API precisam estar publicados com HTTPS.</p>
+    </dialog>
     <noscript>Ative o JavaScript para consultar os gráficos e as vagas.</noscript>
     <script type="module" src="js/app.js?v=20261016-09"></script>
-    <script type="module" src="js/account.js?v=20261016-07"></script>
+    <script type="module" src="js/account.js?v=20261016-13"></script>
 </body>
 </html>

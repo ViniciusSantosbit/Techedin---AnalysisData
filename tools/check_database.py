@@ -22,7 +22,7 @@ def inspect():
             cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
             tables = {row[0] for row in cursor.fetchall()}
             required = {'dim_job', 'dim_technology', 'dim_date', 'dim_seniority', 'fact_job_technology',
-                        'app_user', 'app_user_preferences', 'app_user_resume'}
+                        'app_user', 'app_user_preferences', 'app_user_resume', 'app_push_subscription'}
             print('Tabelas necessárias presentes:', ', '.join(sorted(required & tables)))
             print('Tabelas necessárias ausentes:', ', '.join(sorted(required - tables)) or 'nenhuma')
             if 'flyway_schema_history' in tables:
@@ -30,12 +30,12 @@ def inspect():
                 print('Histórico Flyway:', cursor.fetchall())
             else:
                 print('Histórico Flyway: não existe; schema administrado manualmente.')
-            for table in ('dim_job', 'app_user', 'app_user_preferences', 'app_user_resume'):
+            for table in ('dim_job', 'app_user', 'app_user_preferences', 'app_user_resume', 'app_push_subscription'):
                 cursor.execute("""SELECT column_name, data_type, is_nullable FROM information_schema.columns
                     WHERE table_schema = 'public' AND table_name = %s ORDER BY ordinal_position""", (table,))
                 print(f'Colunas {table}:', cursor.fetchall())
             cursor.execute("""SELECT tablename, rowsecurity FROM pg_tables
-                WHERE schemaname = 'public' AND tablename IN ('app_user', 'app_user_preferences', 'app_user_resume')""")
+                WHERE schemaname = 'public' AND tablename IN ('app_user', 'app_user_preferences', 'app_user_resume', 'app_push_subscription')""")
             print('RLS das tabelas de contas:', cursor.fetchall())
         conn.rollback()
     finally:

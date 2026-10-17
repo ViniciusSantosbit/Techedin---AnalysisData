@@ -243,6 +243,170 @@ def first_text(container, selectors):
     return ''
 
 
+EMPLOYER_PAGES = {
+    'https://carreiras.itau.com.br/busca-de-vagas': ('Itaú', 'Itaú', r'/vaga/[^?#]+/35299/\d+$'),
+    'https://sicoob.empregare.com/pt-br/vagas-de-TI-?pagina=1': ('Sicoob · Empregare', 'Sicoob', r'/pt-br/vaga-[^/?#]+_\d+$'),
+    'https://www.empregare.com/pt-br/vagas-de-tecnologia': ('Empregare', None, r'/pt-br/vaga-[^/?#]+_\d+$'),
+}
+IFOOD_API = 'https://boards-api.greenhouse.io/v1/boards/ifoodcarreiras/jobs?content=true'
+SANTANDER_API = 'https://santander.wd3.myworkdayjobs.com/wday/cxs/santander/SantanderCareers/jobs'
+
+
+class PublicPostingHTML(HTMLParser):
+    """Only structured data and the posting's own description, never navigation/footer text."""
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.links, self.scripts, self.title, self.description = [], [], [], []
+        self.stack, self.script, self.meta_title = [], None, ''
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == 'a' and attrs.get('href'): self.links.append(attrs['href'])
+        if tag == 'meta' and attrs.get('property') == 'og:title': self.meta_title = attrs.get('content', '')
+        if tag == 'script' and attrs.get('type') == 'application/ld+json': self.script = []
+        if tag not in {'meta', 'link', 'img', 'br', 'hr', 'input', 'source', 'wbr', 'area', 'base', 'embed', 'param', 'track'}:
+            self.stack.append((tag, tag == 'h1', bool(set(attrs.get('class', '').split()) & {'vaga-descricao', 'vaga-requisitos'})))
+
+    def handle_endtag(self, tag):
+        if tag == 'script' and self.script is not None:
+            self.scripts.append(''.join(self.script)); self.script = None
+        for index in range(len(self.stack)-1, -1, -1):
+            if self.stack[index][0] == tag:
+                del self.stack[index:]; break
+
+    def handle_data(self, text):
+        if self.script is not None: self.script.append(text)
+        elif any(item[1] for item in self.stack): self.title.append(text)
+        elif any(item[2] for item in self.stack): self.description.append(text)
+
+
+def read_career_resource(url, body=None):
+    request = Request(url, data=json.dumps(body).encode() if body is not None else None,
+                      headers={'User-Agent': 'TechedinJobCollector/1.0', 'Content-Type': 'application/json', 'Accept': '*/*'})
+    with urlopen(request, timeout=20) as response:
+        # Refuse an unexpected redirect to a different host.
+        if response.status != 200 or urlsplit(response.geturl()).hostname != urlsplit(url).hostname:
+            raise ValueError('Resposta inesperada da fonte pública.')
+        data = response.read(8 * 1024 * 1024 + 1)
+    if len(data) > 8 * 1024 * 1024: raise ValueError('Fonte excedeu 8 MB.')
+    return data.decode('utf-8')
+
+
+def posting_objects(value):
+    if isinstance(value, list):
+        for child in value: yield from posting_objects(child)
+    elif isinstance(value, dict):
+        if value.get('@type') == 'JobPosting' or 'JobPosting' in (value.get('@type') or []): yield value
+        if '@graph' in value: yield from posting_objects(value['@graph'])
+
+
+def parse_career_posting(text, url, source, company=None):
+    page = PublicPostingHTML(); page.feed(text)
+    for script in page.scripts:
+        try: postings = list(posting_objects(json.loads(script)))
+        except (ValueError, TypeError): continue
+        for raw in postings:
+            end = raw.get('validThrough')
+            if isinstance(end, str) and re.match(r'^\d{4}-\d{2}-\d{2}', end) and end[:10] < date.today().isoformat(): continue
+            organization = raw.get('hiringOrganization') or {}
+            employer = company or (organization.get('name') if isinstance(organization, dict) else None)
+            if not employer: continue
+            job = normalize_public_job(raw, employer, source, url, raw.get('description'), raw.get('datePosted'))
+            if job: return job
+    # Sicoob uses its own HTML template instead of JobPosting JSON-LD.
+    if source == 'Sicoob · Empregare' and page.title and page.description:
+        if re.search(r'vaga (?:encerrada|expirada|finalizada)', FeedText().text(text), re.I): return None
+        return normalize_public_job({'title': ' '.join(page.title)}, company, source, url, ' '.join(page.description), None)
+    return None
+
+
+def parse_employer_pages(url, max_jobs=30):
+    if url not in EMPLOYER_PAGES: raise ValueError('Portal de carreiras não autorizado.')
+    from urllib.robotparser import RobotFileParser
+    source, company, pattern = EMPLOYER_PAGES[url]
+    origin = urlsplit(url)
+    robots = RobotFileParser(); robots.parse(read_career_resource(f'https://{origin.netloc}/robots.txt').splitlines())
+    if not robots.can_fetch('TechedinJobCollector', url): raise ValueError('Coleta não permitida pelo robots.txt.')
+    index = PublicPostingHTML(); index.feed(read_career_resource(url))
+    links = []
+    for href in index.links:
+        link = canonical_url(url, href)
+        parsed = urlsplit(link or '')
+        if parsed.scheme == 'https' and parsed.netloc == origin.netloc and re.fullmatch(pattern, parsed.path) and link not in links and robots.can_fetch('TechedinJobCollector', link):
+            links.append(link)
+    if not links: raise ValueError('Lista de anúncios mudou de formato ou está indisponível.')
+    jobs, failures = [], 0
+    for link in links[:min(30, max_jobs * 3)]:
+        time.sleep(0.3)
+        try: job = parse_career_posting(read_career_resource(link), link, source, company)
+        except Exception:
+            failures += 1; continue
+        if job: jobs.append(job)
+        if len(jobs) >= max_jobs: break
+    if failures == len(links[:min(30, max_jobs * 3)]): raise ValueError('Nenhum detalhe de anúncio ficou acessível.')
+    return jobs
+
+
+def parse_ifood_jobs(url, max_jobs=100):
+    if url != IFOOD_API: raise ValueError('URL não autorizada para iFood.')
+    jobs, seen = [], set()
+    for raw in read_public_jobs(url):
+        if not isinstance(raw, dict): continue
+        link = raw.get('absolute_url', '')
+        parsed = urlsplit(link if isinstance(link, str) else '')
+        if parsed.scheme != 'https' or parsed.hostname != 'job-boards.greenhouse.io' or parsed.username or not re.fullmatch(r'/ifoodcarreiras/jobs/\d+', parsed.path): continue
+        end = raw.get('application_deadline')
+        if isinstance(end, str) and end[:10] < date.today().isoformat(): continue
+        job = normalize_public_job(raw, 'iFood', 'iFood · Greenhouse', link, raw.get('content'), raw.get('first_published'))
+        if job and link not in seen: jobs.append(job); seen.add(link)
+    jobs.sort(key=lambda job: job['published_date'] or date.min, reverse=True)
+    return jobs[:max_jobs]
+
+
+def parse_santander_jobs(url, max_jobs=30):
+    if url != SANTANDER_API: raise ValueError('URL não autorizada para Santander.')
+    # Derive the Brazil facet from the current public board instead of a guessed ID.
+    body = {'limit': 20, 'offset': 0, 'searchText': '', 'appliedFacets': {}}
+    initial = json.loads(read_career_resource(url, body))
+    def facets(items):
+        for item in items:
+            if isinstance(item, dict):
+                yield item
+                yield from facets(item.get('values', []))
+    all_facets = list(facets(initial.get('facets', [])))
+    countries = [value for facet in all_facets if facet.get('facetParameter') == 'locationCountry' for value in facet.get('values', [])]
+    brazil = next((value['id'] for value in countries if value.get('descriptor') in {'Brazil', 'Brasil'}), None)
+    if brazil is None: raise ValueError('Filtro Brasil não encontrado no portal Santander.')
+    body['appliedFacets'] = {'locationCountry': [brazil]}
+    technical = {'Software Engineering', 'Technology Risk & Cybersecurity', 'Data Analytics & Models',
+                 'Systems Infrastructure & Communication Platforms', 'Solution Application, Infrastructure & Data Architecture',
+                 'Product & IT Project Management', 'Incidents & Problems Management'}
+    families = [value['id'] for facet in all_facets if facet.get('facetParameter') == 'jobFamilyGroup'
+                for value in facet.get('values', []) if value.get('descriptor') in technical]
+    if families: body['appliedFacets']['jobFamilyGroup'] = families
+    jobs, seen = [], set()
+    for offset in range(0, 60, 20):
+        body['offset'] = offset
+        listing = json.loads(read_career_resource(url, body))
+        if not isinstance(listing.get('jobPostings'), list): raise ValueError('Formato Workday mudou.')
+        for item in listing['jobPostings']:
+            path = item.get('externalPath', '')
+            if not isinstance(path, str) or not re.fullmatch(r'/job/[A-Za-z0-9_./%-]+', path) or '..' in path: continue
+            time.sleep(0.3)
+            detail = json.loads(read_career_resource(url[:-5] + path)).get('jobPostingInfo', {})
+            if detail.get('country', {}).get('id') != brazil or detail.get('canApply') is not True or detail.get('posted') is not True: continue
+            link = detail.get('externalUrl', '')
+            parsed = urlsplit(link)
+            if parsed.scheme != 'https' or parsed.hostname != 'santander.wd3.myworkdayjobs.com' or parsed.username or not parsed.path.startswith('/SantanderCareers/job/'): continue
+            end = detail.get('endDate')
+            if isinstance(end, str) and end[:10] < date.today().isoformat(): continue
+            job = normalize_public_job(detail, 'Santander', 'Santander · Workday', link, detail.get('jobDescription'), detail.get('startDate'))
+            if job and link not in seen: jobs.append(job); seen.add(link)
+            if len(jobs) >= max_jobs: return jobs
+        if offset + 20 >= listing.get('total', 0): break
+    return jobs
+
+
 def api_sources():
     sources = []
     if os.getenv('SCRAPER_REMOTIVE_ENABLED', 'true').lower() == 'true':
@@ -250,6 +414,13 @@ def api_sources():
     # Only verified employer boards are enabled; arbitrary caller URLs are never used.
     if os.getenv('SCRAPER_NUBANK_ENABLED', 'true').lower() == 'true':
         sources.append(('Nubank · Ashby', 'https://api.ashbyhq.com/posting-api/job-board/nubank', 1800, parse_nubank_jobs))
+    if os.getenv('SCRAPER_IFOOD_ENABLED', 'true').lower() == 'true':
+        sources.append(('iFood · Greenhouse', IFOOD_API, 1800, parse_ifood_jobs))
+    if os.getenv('SCRAPER_SANTANDER_ENABLED', 'true').lower() == 'true':
+        sources.append(('Santander · Workday', SANTANDER_API, 3600, parse_santander_jobs))
+    if os.getenv('SCRAPER_EMPLOYER_PAGES_ENABLED', 'true').lower() == 'true':
+        for url, (name, _, _) in EMPLOYER_PAGES.items():
+            sources.append((name, url, 3600, parse_employer_pages))
     return sources
 
 
@@ -624,7 +795,7 @@ def main():
     parser.add_argument('--demo-json', type=Path, help='Gera 10 vagas fictícias em JSON, sem sites/banco.')
     parser.add_argument('--export-json', type=Path, help='Coleta vagas REAIS e salva um snapshot, sem conexão com banco.')
     parser.add_argument('--max-jobs', type=int, default=30, help='Limite de vagas por fonte (1 a 100).')
-    parser.add_argument('--api-only', action='store_true', help='Consulta somente APIs públicas Remotive/Nubank, sem Chromium ou RSS.')
+    parser.add_argument('--api-only', action='store_true', help='Consulta APIs e novos portais HTTP públicos, sem Chromium ou RSS.')
     parser.add_argument('--watch', action='store_true', help='Mantém o coletor ativo; interrompa com Ctrl+C.')
     parser.add_argument('--interval-seconds', type=int, default=1800, help='Intervalo entre ciclos no modo watch, mínimo 900.')
 
