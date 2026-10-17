@@ -25,7 +25,7 @@ function sourceIcon(name) {
     const icon = element('span', 'source-icon', name[0]);
     const brands = [
         ['sicoob', 'sicoob.ico'], ['santander', 'santander.ico'],
-        ['nubank', 'nubank.ico'], ['itaú', 'itau.ico'], ['itau', 'itau.ico'],
+        ['nubank', 'nubank.ico'], ['itaú', 'itau-bankline.ico'], ['itau', 'itau-bankline.ico'],
         ['ifood', 'ifood.ico'], ['empregare', 'empregare.ico'],
         ['remotive', 'remotive.ico'], ['we work remotely', 'wwr.ico'],
         ['gupy', 'gupy.png'], ['catho', 'catho.ico']

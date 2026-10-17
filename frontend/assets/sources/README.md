@@ -7,7 +7,7 @@ Favicons obtidos dos sites oficiais em 17/10/2026 para identificar as fontes de 
 | gupy.png | https://www.gupy.io/favicon.ico |
 | catho.ico | https://www.catho.com.br/favicon.ico |
 | empregare.ico | https://www.empregare.com/favicon.ico |
-| itau.ico | https://carreiras.itau.com.br/favicon.ico |
+| itau-bankline.ico | https://bankline.itau.com.br/favicon.ico |
 | nubank.ico | https://nubank.com.br/favicon.ico |
 | remotive.ico | https://remotive.com/favicon.ico |
 | santander.ico | https://www.santander.com.br/favicon.ico |
