@@ -1,0 +1,38 @@
+{
+  "empregare": {
+    "file": "empregare-hq.png",
+    "url": "https://www.empregare.com/assetsV2/common/images/global/favicon/android-icon-192x192.png"
+  },
+  "sicoob": {
+    "file": "sicoob-hq.png",
+    "url": "https://www.sicoob.com.br/o/sicoob-theme/images/favicon/android-icon-192x192.png"
+  },
+  "remotive": {
+    "file": "remotive-hq.png",
+    "url": "https://remotive.com/remotive_website_layout/static/src/img/apple-touch-icon.png"
+  },
+  "gupy": {
+    "file": "gupy-hq.png",
+    "url": "https://www.gupy.io/hubfs/img/rebranding-2020/img/shortcut-icon.png"
+  },
+  "ifood": {
+    "file": "ifood-hq.png",
+    "url": "https://institucional.ifood.com.br/wp-content/uploads/2026/08/ifood-favicon-v2026-300x300.png"
+  },
+  "itau": {
+    "file": "itau-hq.svg",
+    "url": "https://commons.wikimedia.org/wiki/File:Ita%C3%BA_Unibanco_logo_2023.svg"
+  },
+  "santander": {
+    "file": "santander-hq.png",
+    "url": "https://www.santander.com/content/dam/santander-com/resources/favicon/favicon-192x192.png"
+  },
+  "wwr": {
+    "file": "wwr-hq.png",
+    "url": "https://weworkremotely.com/apple-touch-icon.png"
+  },
+  "catho": {
+    "file": "catho-hq.png",
+    "url": "https://www.catho.com.br/apple-touch-icon.png"
+  }
+}

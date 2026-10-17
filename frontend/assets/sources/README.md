@@ -1,5 +1,7 @@
 # Ícones das fontes
 
+As versões maiores em uso e suas origens estão registradas em `high-resolution-sources.json`. Itaú usa SVG vetorial; as demais substituições usam imagens originais maiores, sem ampliação artificial. Nubank mantém seu ícone anterior. Os arquivos antigos abaixo permanecem apenas como histórico da origem inicial.
+
 Favicons obtidos dos sites oficiais em 17/10/2026 para identificar as fontes de vagas. As marcas pertencem aos respectivos titulares; a exibição não indica parceria.
 
 | Arquivo | Origem |

@@ -24,11 +24,11 @@ function element(tag, className, text) {
 function sourceIcon(name) {
     const icon = element('span', 'source-icon', name[0]);
     const brands = [
-        ['sicoob', 'sicoob.ico'], ['santander', 'santander.ico'],
-        ['nubank', 'nubank.ico'], ['itaú', 'itau-bankline.ico'], ['itau', 'itau-bankline.ico'],
-        ['ifood', 'ifood.ico'], ['empregare', 'empregare.ico'],
-        ['remotive', 'remotive.ico'], ['we work remotely', 'wwr.ico'],
-        ['gupy', 'gupy.png'], ['catho', 'catho.ico']
+        ['sicoob', 'sicoob-hq.png'], ['santander', 'santander-hq.png'],
+        ['nubank', 'nubank.ico'], ['itaú', 'itau-hq.svg'], ['itau', 'itau-hq.svg'],
+        ['ifood', 'ifood-hq.png'], ['empregare', 'empregare-hq.png'],
+        ['remotive', 'remotive-hq.png'], ['we work remotely', 'wwr-hq.png'],
+        ['gupy', 'gupy-hq.png'], ['catho', 'catho-hq.png']
     ];
     const brand = brands.find(([label]) => name.toLowerCase().includes(label));
     if (brand) {
