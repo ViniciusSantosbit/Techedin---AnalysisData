@@ -1,3 +1,5 @@
-target
-.git
+target/
+.env
+.env.*
 *.log
+.git/

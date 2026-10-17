@@ -52,7 +52,7 @@ Exclusão exige senha atual e a palavra EXCLUIR. Remove conta, preferências, cu
 
 ## Publicação
 
-Vercel deve publicar somente `frontend/`. A API Java e o coletor Python precisam de hospedagem própria. A API exige banco V7 e SMTP; o coletor precisa permanecer ativo para alimentar alertas. Configure um proxy de `/api/**` na Vercel para a URL HTTPS real da API. Isso mantém as sessões no mesmo domínio do site; apontar diretamente para outro domínio exigiria rever cookies e CORS. Ainda não há URL de API publicada, portanto esse proxy não foi inventado nem ativado.
+Vercel deve publicar somente `frontend/`. A API Java e o coletor Python precisam de hospedagem própria. A API exige banco V7; SMTP permanece opcional e desativado por escolha do usuário. O coletor precisa permanecer ativo para alimentar alertas. Configure um proxy de `/api/**` na Vercel para a URL HTTPS real da API. Isso mantém as sessões no mesmo domínio do site; apontar diretamente para outro domínio exigiria rever cookies e CORS. Ainda não há URL de API publicada, portanto esse proxy não foi inventado nem ativado. Veja o passo a passo em [DEPLOYMENT.md](DEPLOYMENT.md).
 
 Antes de abrir ao público: validar entrega SMTP e os fluxos completos por HTTPS, configurar limites também no proxy para múltiplas instâncias e substituir segredos que foram compartilhados anteriormente. O limitador atual é por processo e endereço direto; o proxy não deve tratar qualquer `X-Forwarded-For` fornecido pelo cliente como confiável.
 

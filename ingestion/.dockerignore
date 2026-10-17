@@ -1,4 +1,9 @@
 .env
-.venv
-__pycache__
-tests
+.env.*
+!.env.example
+__pycache__/
+**/__pycache__/
+.venv/
+.cache/
+*.log
+tests/

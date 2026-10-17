@@ -1,5 +1,5 @@
-const CACHE = 'techedin-static-v2';
-const PUBLIC = ['./offline.html', './manifest.webmanifest', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png'];
+const CACHE = 'techedin-static-v3';
+const PUBLIC = ['./offline.html', './manifest.webmanifest', './icons/techedin-180.png', './icons/techedin-192.png', './icons/techedin-512.png', './icons/techedin-maskable-512.png'];
 self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(PUBLIC)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', event => { event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('techedin-static-') && key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', event => {
@@ -9,8 +9,8 @@ self.addEventListener('fetch', event => {
     else if (PUBLIC.some(path => new URL(path, self.registration.scope).href === url.href)) event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request)));
 });
 self.addEventListener('push', event => { event.waitUntil(self.registration.showNotification('Techedin Â· Vagas para explorar', {
-    body: 'Abra o app para conferir as novidades nas suas sugestÃµes.', icon: new URL('./icons/icon-192.png', self.registration.scope).href,
-    badge: new URL('./icons/icon-192.png', self.registration.scope).href, tag: 'techedin-jobs', renotify: false
+    body: 'Abra o app para conferir as novidades nas suas sugestÃµes.', icon: new URL('./icons/techedin-192.png', self.registration.scope).href,
+    badge: new URL('./icons/techedin-192.png', self.registration.scope).href, tag: 'techedin-jobs', renotify: false
 })); });
 self.addEventListener('notificationclick', event => {
     event.notification.close();

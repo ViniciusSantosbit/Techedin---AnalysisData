@@ -169,6 +169,8 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
 }
 .brand-mark span { color: var(--color-iris-violet); }
 .brand-tag { margin-left: var(--spacing-8); color: var(--color-ash-gray); font-size: var(--text-caption); font-weight: 400; letter-spacing: 0; }
+.brand-symbol { display: block; width: 44px; height: auto; flex-shrink: 0; }
+.brand-logo { display: block; width: 275px; height: auto; }
 .site-header nav { display: flex; gap: var(--spacing-28); color: var(--color-ash-gray); font-size: var(--text-body-sm); }
 .site-header nav a { padding: var(--spacing-32) 0; position: relative; }
 .site-header nav a:hover, .site-header nav .nav-active { color: var(--color-white); }
@@ -308,6 +310,10 @@ select { max-width: 100%; min-height: 42px; padding: 9px 30px 9px 12px; border: 
 
 /* Responsive layout */
 @media (max-width: 1120px) {
+    .brand-logo { width: 215px; }
+    .site-header { flex-wrap: wrap; padding-top: 16px; }
+    .site-header nav { order: 3; flex-basis: 100%; }
+    .site-header nav a { padding: 12px 0; }
     .brand-tag, .header-label { display: none; }
     .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .heading-actions { max-width: 260px; }
@@ -318,6 +324,8 @@ select { max-width: 100%; min-height: 42px; padding: 9px 30px 9px 12px; border: 
     .chart-wrap { height: 340px; }
 }
 @media (max-width: 720px) {
+    .brand-symbol { width: 36px; }
+    .brand-logo { width: min(215px, 58vw); }
     :root { --card-padding: 24px; }
     .site-header, .dashboard { width: calc(100% - 40px); }
     .site-header { min-height: 76px; gap: var(--spacing-16); }

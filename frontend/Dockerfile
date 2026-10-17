@@ -8,3 +8,5 @@ EXPOSE 80
 
 COPY manifest.webmanifest sw.js offline.html /usr/share/nginx/html/
 COPY icons /usr/share/nginx/html/icons
+COPY assets /usr/share/nginx/html/assets
+COPY favicon.ico favicon.png /usr/share/nginx/html/
