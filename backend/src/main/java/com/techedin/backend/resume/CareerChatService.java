@@ -51,7 +51,8 @@ public class CareerChatService {
             var response = http.send(request, HttpResponse.BodyHandlers.ofInputStream());
             byte[] bytes;
             try (var stream = response.body()) { bytes = stream.readNBytes(65537); }
-            if (response.statusCode() != 200 || bytes.length > 65536) throw error(502, "O Gemini não respondeu. Tente novamente em instantes.");
+            if (response.statusCode() != 200) throw GeminiFailure.fromStatus(response.statusCode());
+            if (bytes.length > 65536) throw error(502, "A resposta do assistente excedeu o limite permitido. Tente uma pergunta mais curta.");
             var candidate = json.readTree(bytes).path("candidates").path(0);
             if (!"STOP".equals(candidate.path("finishReason").asText())) throw error(502, "O assistente não concluiu a resposta. Tente uma pergunta mais curta.");
             StringBuilder answer = new StringBuilder();

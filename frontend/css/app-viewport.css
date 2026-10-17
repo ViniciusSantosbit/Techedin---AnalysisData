@@ -1,0 +1,5 @@
+/* Keep one-finger scrolling and controls usable; omit pinch/double-tap zoom. */
+html.pwa-touch-app,
+html.pwa-touch-app * { touch-action: pan-x pan-y; }
+/* Avoid automatic focus zoom on small form fields in the installed iOS app. */
+html.pwa-touch-app :is(input, select, textarea) { font-size: max(16px, 1rem); }

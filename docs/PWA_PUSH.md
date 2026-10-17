@@ -1,8 +1,29 @@
 # PWA e alertas de vagas
 
-## Estado local
+## Zoom no app instalado
 
-Implementados manifest, ícones PNG, instalação com orientações Android/iOS, service worker, tela offline e preferências de push por dispositivo. A API cadastra inscrições privadas, verifica novas vagas com o mesmo motor de recomendações e envia Web Push autenticado por VAPID. O projeto continua local: nenhum serviço foi publicado. Endereço de frontend previsto pelo usuário: https://techedin.vercel.app. A API ainda não tem endereço público.
+Em modo standalone com tela de toque, o frontend aplica limite de escala e `touch-action: pan-x pan-y`, bloqueia gestos de pinça canceláveis e mantém a rolagem com um dedo. Campos têm fonte mínima de 16 px nesse modo para evitar zoom automático ao receber foco. A mesma regra é carregada pela tela offline. Abas comuns do navegador, inclusive após clicar em instalar, mantêm o zoom livre; o bloqueio só entra quando o app é aberto em modo instalado.
+
+A detecção e as regras foram verificadas com testes automatizados e emulação. A emulação não confirmou o gesto nativo de pinça; é necessário validar em aparelhos físicos. Navegadores, especialmente Safari/iOS, e configurações de acessibilidade podem ignorar limites de escala. A aplicação não controla a ampliação do sistema operacional.
+
+## Ativação no Render
+
+A API foi publicada em `https://techedin-analysisdata.onrender.com`. Configurar `ingestion/.env` no computador não configura o ambiente do Render.
+
+No painel do serviço, abra **Environment**, edite as variáveis e salve para gerar um novo deploy:
+
+| Variável | Valor |
+| --- | --- |
+| `WEB_PUSH_ENABLED` | `true` |
+| `WEB_PUSH_PUBLIC_KEY` | Copiar o valor existente em `ingestion/.env` |
+| `WEB_PUSH_PRIVATE_KEY` | Copiar o valor existente em `ingestion/.env`; manter secreto |
+| `WEB_PUSH_SUBJECT` | URI HTTPS de contato do projeto, por exemplo `https://techedin-analysisdata.onrender.com` |
+
+Preserve o mesmo par de chaves entre deploys. Depois do deploy, atualize o site, entre na conta e ative os alertas no perfil. A API e o coletor precisam estar ativos para descobrir e avisar novas vagas; uma instância suspensa por inatividade não executa esse trabalho. SMTP não participa do Web Push.
+
+## Implementação e uso local
+
+Implementados manifest, ícones PNG, instalação com orientações Android/iOS, service worker, tela offline e preferências de push por dispositivo. A API cadastra inscrições privadas, verifica novas vagas com o mesmo motor de recomendações e envia Web Push autenticado por VAPID.
 
 No computador, abra pelo Live Server ou Docker em localhost/127.0.0.1. O botão **Instalar app** usa a opção nativa do navegador quando disponível; senão mostra instruções. Para alertas, entre na conta, anexe o currículo e abra o perfil → **Alertas neste dispositivo** → **Ativar notificações**. Somente esse clique solicita permissão. Desativar remove a inscrição deste navegador; sair da conta tenta remover a inscrição e cancela a assinatura no navegador. Outros dispositivos mantêm suas próprias preferências. Máximo: cinco dispositivos por conta. A permissão também pode ser revogada nas configurações do navegador/sistema.
 

@@ -65,7 +65,7 @@ public class ResumeEvaluationService {
             var response = http.send(request, HttpResponse.BodyHandlers.ofInputStream());
             byte[] bytes;
             try (var stream = response.body()) { bytes = stream.readNBytes(131073); }
-            if (response.statusCode() != 200) throw error(502, "O Gemini não concluiu a avaliação. Verifique chave, modelo e cota no servidor.");
+            if (response.statusCode() != 200) throw GeminiFailure.fromStatus(response.statusCode());
             if (bytes.length > 131072) throw error(502, "A resposta da IA excedeu o limite permitido.");
             var candidate = json.readTree(bytes).path("candidates").path(0);
             if (!"STOP".equals(candidate.path("finishReason").asText())) throw error(502, "A IA não concluiu a resposta. Tente novamente.");

@@ -18,7 +18,7 @@ try:
   page.locator('#install-app').click();expect(page.locator('#install-help')).to_be_visible()
   expect(page.locator('#install-help')).to_contain_text('Tela de Início');page.locator('#install-help-close').click()
   urls=page.evaluate('async()=>{const keys=await caches.keys();return (await Promise.all(keys.map(async k=>(await (await caches.open(k)).keys()).map(r=>r.url)))).flat();}')
-  assert len(urls)==6,urls
+  assert len(urls)==8,urls
   assert not any('/api/' in url or 'index.html' in url for url in urls),urls
   context.unroute('**/api/**')
   context.set_offline(True);page.goto(origin+'offline-check')
