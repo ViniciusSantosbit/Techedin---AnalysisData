@@ -21,6 +21,29 @@ function element(tag, className, text) {
     return node;
 }
 
+function sourceIcon(name) {
+    const icon = element('span', 'source-icon', name[0]);
+    const brands = [
+        ['sicoob', 'sicoob.ico'], ['santander', 'santander.ico'],
+        ['nubank', 'nubank.ico'], ['itaú', 'itau.ico'], ['itau', 'itau.ico'],
+        ['ifood', 'ifood.ico'], ['empregare', 'empregare.ico'],
+        ['remotive', 'remotive.ico'], ['we work remotely', 'wwr.ico'],
+        ['gupy', 'gupy.png'], ['catho', 'catho.ico']
+    ];
+    const brand = brands.find(([label]) => name.toLowerCase().includes(label));
+    if (brand) {
+        const image = document.createElement('img');
+        image.alt = '';
+        image.width = image.height = 28;
+        image.loading = 'lazy';
+        image.addEventListener('error', () => { icon.textContent = name[0]; }, { once: true });
+        image.src = 'assets/sources/' + brand[1];
+        icon.replaceChildren(image);
+    }
+    icon.setAttribute('aria-hidden', 'true');
+    return icon;
+}
+
 async function fetchJson(url, timeout) {
     const response = await fetch(url, { signal: AbortSignal.timeout(timeout), cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -143,7 +166,7 @@ function renderSources() {
         const meta = element('div', 'source-meta');
         const status = describeSource(source);
         meta.append(element('strong', '', name), element('small', '', status.description));
-        row.append(element('span', 'source-icon', name[0]), meta,
+        row.append(sourceIcon(name), meta,
             element('span', `source-state ${status.warning ? 'unavailable' : source.status === 'stored' ? 'stored' : ''}`, status.label));
         $('sources-list').append(row);
     });

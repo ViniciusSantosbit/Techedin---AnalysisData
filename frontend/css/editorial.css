@@ -194,8 +194,10 @@ select { background: var(--color-linen); color: var(--color-graphite); border-co
 .career-chat-launcher { background: var(--color-brand-lilac); color: #ead7f1; border-color: #c1a7ca; box-shadow: var(--shadow-sm); }
 .career-chat { background: var(--color-parchment); border-color: #65526d; color: var(--color-graphite); box-shadow: 0 12px 40px #0004; }
 .career-chat-heading h2 { font-family: var(--font-ppmondwest); font-size: 23px; font-weight: 400; }
-.career-chat-message { background: #2b2731; }
-.career-chat-message.user { background: #372b3e; border-color: #826387; }
+.career-chat-message { background: #A47DAB; color: #1b1a1f; }
+.career-chat-message.user { background: #A47DAB; color: #1b1a1f; border-color: #332736; }
+.page-heading h1 { font-weight: 700; }
+.source-icon img { display: block; width: 28px; height: 28px; object-fit: contain; }
 
 @media (max-width: 1120px) {
     .site-header { border-radius: var(--radius-nav); padding: 16px 24px; }
